@@ -1,0 +1,19 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "INR",
+          "symbol": "INR=X",
+          "regularMarketPrice": 84.4250,
+          "chartPreviousClose": 84.2100,
+          "previousClose": 84.2100,
+          "regularMarketTime": 1746198000
+        },
+        "timestamp": [1746024000, 1746110400, 1746196800],
+        "indicators": {"quote": [{}]}
+      }
+    ],
+    "error": null
+  }
+}

@@ -1,0 +1,62 @@
+name: Daily Pulse
+
+on:
+  schedule:
+    # 02:50 UTC = 08:20 IST. ~55-min buffer before market open at 09:15 IST.
+    # GitHub Actions cron can drift up to ~15 min under load — schedule
+    # earlier than your hard deadline.
+    - cron: '50 2 * * 1-5'
+  # Allow manual triggers from the Actions tab too.
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'Restrict to one channel (linkedin / telegram / whatsapp)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-pulse
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Run pulse
+        env:
+          N8N_TELEGRAM_WEBHOOK: ${{ secrets.N8N_TELEGRAM_WEBHOOK }}
+          N8N_LINKEDIN_WEBHOOK: ${{ secrets.N8N_LINKEDIN_WEBHOOK }}
+          N8N_WHATSAPP_WEBHOOK: ${{ secrets.N8N_WHATSAPP_WEBHOOK }}
+          EQUIFIZ_PULSE_URL:    ${{ secrets.EQUIFIZ_PULSE_URL }}
+        run: |
+          if [ -n "${{ inputs.only }}" ]; then
+            uv run pulse run --only "${{ inputs.only }}" --confirm
+          else
+            uv run pulse run --only telegram --confirm
+          fi
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pulse-log-${{ github.run_id }}
+          path: logs/
+          retention-days: 30
+          if-no-files-found: ignore

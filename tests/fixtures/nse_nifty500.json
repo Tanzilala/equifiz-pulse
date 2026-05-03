@@ -1,0 +1,19 @@
+{
+  "name": "NIFTY 500",
+  "advance": {"declines": "210", "advances": "270", "unchanged": "20"},
+  "timestamp": "30-Apr-2026 15:30:00",
+  "data": [
+    {"priority": 1, "symbol": "NIFTY 500", "meta": null, "lastPrice": 22100.0, "pChange": -0.7, "totalTradedVolume": 0},
+    {"priority": 0, "symbol": "MEGAUP", "meta": {"companyName": "Mega Upside Industries Ltd"}, "lastPrice": 1234.50, "pChange": 14.32, "totalTradedVolume": 5400000},
+    {"priority": 0, "symbol": "BIGGAIN", "meta": {"companyName": "Big Gainer Co"}, "lastPrice": 555.20, "pChange": 9.51, "totalTradedVolume": 2100000},
+    {"priority": 0, "symbol": "MIDGAIN", "meta": {"companyName": "Mid Gainer Ltd"}, "lastPrice": 410.05, "pChange": 6.7, "totalTradedVolume": 1200000},
+    {"priority": 0, "symbol": "OKGAIN", "meta": {"companyName": "OK Gain Industries"}, "lastPrice": 88.0, "pChange": 5.55, "totalTradedVolume": 9500000},
+    {"priority": 0, "symbol": "MINIGAIN", "meta": {"companyName": "Mini Gain Inc"}, "lastPrice": 22.4, "pChange": 4.2, "totalTradedVolume": 3000000},
+    {"priority": 0, "symbol": "FLATCO", "meta": {"companyName": "Flat Co"}, "lastPrice": 100.0, "pChange": 0.0, "totalTradedVolume": 800000},
+    {"priority": 0, "symbol": "MINILOSE", "meta": {"companyName": "Mini Loss Co"}, "lastPrice": 44.1, "pChange": -3.2, "totalTradedVolume": 1500000},
+    {"priority": 0, "symbol": "MIDLOSE", "meta": {"companyName": "Mid Loss Ltd"}, "lastPrice": 220.6, "pChange": -5.1, "totalTradedVolume": 2400000},
+    {"priority": 0, "symbol": "BIGLOSE", "meta": {"companyName": "Big Loss Industries"}, "lastPrice": 99.0, "pChange": -7.8, "totalTradedVolume": 4000000},
+    {"priority": 0, "symbol": "MEGALOSE", "meta": {"companyName": "Mega Loss Corp"}, "lastPrice": 18.0, "pChange": -10.5, "totalTradedVolume": 6500000},
+    {"priority": 0, "symbol": "ULTRALOSE", "meta": {"companyName": "Ultra Loss Inc"}, "lastPrice": 7.2, "pChange": -19.95, "totalTradedVolume": 8200000}
+  ]
+}

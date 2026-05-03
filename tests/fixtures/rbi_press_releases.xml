@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>RBI Press Releases</title>
+    <link>https://www.rbi.org.in</link>
+    <description>Reserve Bank of India press releases</description>
+    <item>
+      <title>Master Direction on Liquidity Risk Management — Amendment</title>
+      <link>https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=12345</link>
+      <description>RBI today amended Master Direction No. 2025-26/01 on liquidity risk management for NBFCs.</description>
+      <pubDate>Sat, 02 May 2026 16:00:00 +0530</pubDate>
+    </item>
+    <item>
+      <title>RBI to conduct VRRR auction on May 5, 2026</title>
+      <link>https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=12344</link>
+      <description>The Reserve Bank will conduct a 14-day Variable Rate Reverse Repo auction.</description>
+      <pubDate>Sat, 02 May 2026 11:30:00 +0530</pubDate>
+    </item>
+    <item>
+      <title>Old item that should be filtered out</title>
+      <link>https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=11000</link>
+      <description>Older press release outside lookback window.</description>
+      <pubDate>Mon, 20 Apr 2026 09:00:00 +0530</pubDate>
+    </item>
+  </channel>
+</rss>
