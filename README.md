@@ -33,6 +33,11 @@ uv run pulse run --confirm                 # post to all three webhooks
 uv run pulse indices                       # NSE indices snapshot only
 uv run pulse logs --last 10                # last 10 runs as a table
 uv run pulse logs --raw                    # raw JSONL
+
+# Daily business news (separate command — fires at 08:00 IST via cron)
+uv run pulse news preview                  # show the news block, no posting
+uv run pulse news run                      # dry-run
+uv run pulse news run --once-per-day --confirm   # post; skips if already posted today
 ```
 
 ### n8n flows

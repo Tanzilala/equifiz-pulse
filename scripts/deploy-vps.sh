@@ -52,13 +52,16 @@ else
     exit 1
 fi
 
-# Cron strategy: pulse run every 30 min in the evening + once next morning as
-# a safety net.  --skip-if-stale exits cleanly until NSE publishes today's
-# FII/DII figures (typically ~19:00–20:00 IST).  --once-per-day uses a marker
-# file so only the first successful run actually posts.
+# Cron strategy:
+# - Markets brief: every 30 min evening + safety net 8:30 AM next day.
+#   --skip-if-stale waits for NSE to publish today's FII/DII figures.
+# - News brief: 8:00 AM daily — RSS feeds always have fresh content.
+# Both use --once-per-day with their own marker files so retries don't dupe.
 CRON_BLOCK="# equifiz-pulse — daily Indian markets briefing
 */30 18-22 * * 1-5 cd $INSTALL_DIR && $UV run pulse run --only telegram --skip-if-stale --once-per-day --confirm >> $INSTALL_DIR/logs/cron.log 2>&1
-30 8 * * 2-6 cd $INSTALL_DIR && $UV run pulse run --only telegram --skip-if-stale --once-per-day --confirm >> $INSTALL_DIR/logs/cron.log 2>&1"
+30 8 * * 2-6 cd $INSTALL_DIR && $UV run pulse run --only telegram --skip-if-stale --once-per-day --confirm >> $INSTALL_DIR/logs/cron.log 2>&1
+# equifiz-pulse — daily business news roundup
+0 8 * * * cd $INSTALL_DIR && $UV run pulse news run --once-per-day --confirm >> $INSTALL_DIR/logs/cron.log 2>&1"
 
 cat <<EOF
 

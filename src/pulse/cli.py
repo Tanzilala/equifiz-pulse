@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .briefing import build_briefing
+from .data.news import fetch_news
 from .distribute import (
     ChannelPost,
     PostResult,
@@ -24,6 +25,7 @@ from .distribute import (
 )
 from .format import (
     format_linkedin,
+    format_news,
     format_telegram,
     format_whatsapp,
 )
@@ -391,6 +393,139 @@ async def _post_all(posts: list[ChannelPost]) -> list[PostResult]:
 
     async with httpx.AsyncClient(timeout=15.0) as http:
         return list(await asyncio.gather(*(post_to_n8n(p, http=http) for p in posts)))
+
+
+# ---------- pulse news -------------------------------------------------------
+
+def _news_marker_path(ist_today: "date") -> Path:
+    return Path("logs") / "markers" / f"news-posted-{ist_today.isoformat()}.marker"
+
+
+@main.group()
+def news() -> None:
+    """Daily business news headlines (Business Standard / Economic Times / Mint)."""
+
+
+@news.command("preview")
+def news_preview() -> None:
+    """Print the news block without posting."""
+    console = Console(force_terminal=True, width=160, legacy_windows=False)
+    try:
+        snap = asyncio.run(fetch_news())
+    except Exception as e:
+        console.print(f"[red]News fetch failed:[/] {type(e).__name__}: {e}")
+        raise SystemExit(1)
+    text = format_news(snap)
+    console.print(Panel(text, title=f"News ({snap.total_items()} items, {len(text)} chars)", expand=True))
+    if snap.unavailable_sources:
+        console.print(f"[yellow]Unavailable:[/] {snap.unavailable_sources}")
+
+
+@news.command("run")
+@click.option("--confirm", is_flag=True, help="Actually POST. Without this, dry-run only.")
+@click.option("--once-per-day", is_flag=True, help="Skip if news was already posted today.")
+def news_run(confirm: bool, once_per_day: bool) -> None:
+    """Build today's news headlines and POST to N8N_TELEGRAM_WEBHOOK."""
+    console = Console(force_terminal=True, width=160, legacy_windows=False)
+    logger = RunLogger()
+    started_at = datetime.now(timezone.utc)
+    ist_today = _ist_today()
+
+    webhook = os.environ.get("N8N_TELEGRAM_WEBHOOK", "").strip()
+    if confirm and not webhook:
+        console.print("[red]N8N_TELEGRAM_WEBHOOK not set; cannot --confirm.[/]")
+        raise SystemExit(2)
+
+    if once_per_day and confirm:
+        marker = _news_marker_path(ist_today)
+        if marker.exists():
+            console.print(f"[yellow]SKIP (already posted news today):[/] {marker.name}")
+            logger.write({
+                "started_at": started_at.isoformat(),
+                "command": "news-run",
+                "args": {"confirm": confirm},
+                "skipped": "already_posted",
+                "exit_code": 0,
+            })
+            return
+
+    if not confirm:
+        console.print("[yellow]DRY RUN[/] — payload built but not POSTed.")
+
+    try:
+        snap = asyncio.run(fetch_news())
+    except Exception as e:
+        console.print(f"[red]News fetch failed:[/] {type(e).__name__}: {e}")
+        logger.write({
+            "started_at": started_at.isoformat(),
+            "command": "news-run",
+            "args": {"confirm": confirm},
+            "error": f"{type(e).__name__}: {e}",
+            "exit_code": 1,
+        })
+        raise SystemExit(1)
+
+    if snap.total_items() == 0:
+        console.print(f"[red]All news sources unavailable:[/] {snap.unavailable_sources}")
+        logger.write({
+            "started_at": started_at.isoformat(),
+            "command": "news-run",
+            "args": {"confirm": confirm},
+            "error": f"all sources unavailable: {snap.unavailable_sources}",
+            "exit_code": 1,
+        })
+        raise SystemExit(1)
+
+    text = format_news(snap)
+
+    if not confirm:
+        console.print(Panel(text, title=f"News dry-run ({len(text)} chars)", expand=True))
+        if snap.unavailable_sources:
+            console.print(f"[yellow]Unavailable:[/] {snap.unavailable_sources}")
+        return
+
+    payload = {
+        "channel": "telegram",
+        "kind": "news",
+        "text": text,
+        "format": "markdown",
+        "generated_at": started_at.isoformat(),
+    }
+    post = ChannelPost(channel="telegram", webhook_url=webhook, payload=payload)
+    result = asyncio.run(_post_all([post]))[0]
+
+    if result.status == "sent":
+        console.print(
+            f"[green]OK news[/] sent in {result.duration_ms}ms "
+            f"(HTTP {result.http_status}, {result.payload_chars} chars)"
+        )
+        marker = _news_marker_path(ist_today)
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+        logger.write({
+            "started_at": started_at.isoformat(),
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "command": "news-run",
+            "args": {"confirm": confirm},
+            "items": snap.total_items(),
+            "unavailable": snap.unavailable_sources,
+            "post": result.model_dump(),
+            "exit_code": 0,
+        })
+    else:
+        console.print(
+            f"[red]FAIL news[/] {result.status} after {result.duration_ms}ms — "
+            f"{result.error or 'unknown'}"
+        )
+        logger.write({
+            "started_at": started_at.isoformat(),
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "command": "news-run",
+            "args": {"confirm": confirm},
+            "post": result.model_dump(),
+            "exit_code": 1,
+        })
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
