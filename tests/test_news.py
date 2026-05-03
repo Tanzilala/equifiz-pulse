@@ -74,10 +74,11 @@ def test_format_news_matches_template():
     assert "*Business Standard*" in text
     assert "*Economic Times*" in text
     assert "*Mint*" in text
-    # Markdown link form (rendered as tappable link in Telegram)
-    assert "📝 [BS one](https://x/1)" in text
-    assert "📝 [ET one](https://x/3)" in text
-    assert "📝 [Mint one](https://x/4)" in text
+    # Plain titles — no links (links felt overwhelming, dropped intentionally)
+    assert "📝 BS one" in text
+    assert "📝 ET one" in text
+    assert "📝 Mint one" in text
+    assert "https://" not in text  # confirm no inline links
     # source order preserved (BS → ET → Mint)
     assert text.find("Business Standard") < text.find("Economic Times") < text.find("Mint")
 
@@ -97,40 +98,6 @@ def test_format_news_omits_empty_sources():
     assert "*Business Standard*" in text
     assert "*Economic Times*" not in text
     assert "*Mint*" not in text
-
-
-def test_format_news_uses_markdown_links():
-    fa = datetime(2026, 5, 4, 8, 0, tzinfo=timezone.utc)
-    snap = NewsSnapshot(
-        fetched_at=fa,
-        by_source={
-            "Business Standard": [
-                NewsItem(source="Business Standard", title="ADB launches power push",
-                         url="https://www.business-standard.com/x"),
-            ],
-        },
-        unavailable_sources=[],
-    )
-    text = format_news(snap)
-    assert "📝 [ADB launches power push](https://www.business-standard.com/x)" in text
-
-
-def test_format_news_strips_brackets_in_link_text():
-    fa = datetime(2026, 5, 4, 8, 0, tzinfo=timezone.utc)
-    snap = NewsSnapshot(
-        fetched_at=fa,
-        by_source={
-            "Business Standard": [
-                NewsItem(source="Business Standard",
-                         title="RBI [draft] for upper layer NBFCs",
-                         url="https://x.com/p"),
-            ],
-        },
-        unavailable_sources=[],
-    )
-    text = format_news(snap)
-    # Square brackets in title would break Markdown link parsing.
-    assert "[RBI (draft) for upper layer NBFCs]" in text
 
 
 def test_is_clickbait_catches_listicles():
