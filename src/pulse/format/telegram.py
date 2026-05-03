@@ -46,9 +46,9 @@ def format_telegram(b: PulseBriefing) -> str:
 
     movers = "*Top movers*"
     for m in b.movers.gainers[:3]:
-        movers += f"\n🔺 `{m.symbol}` {signed_pct(m.change_pct, places=1)}{vol_ratio(m.volume_ratio)}"
+        movers += f"\n{trend_emoji(m.change_pct)} `{m.symbol}` {signed_pct(m.change_pct, places=1)}{vol_ratio(m.volume_ratio)}"
     for m in b.movers.losers[:3]:
-        movers += f"\n🔻 `{m.symbol}` {signed_pct(m.change_pct, places=1)}{vol_ratio(m.volume_ratio)}"
+        movers += f"\n{trend_emoji(m.change_pct)} `{m.symbol}` {signed_pct(m.change_pct, places=1)}{vol_ratio(m.volume_ratio)}"
     sections.append(movers)
 
     mq = b.macro

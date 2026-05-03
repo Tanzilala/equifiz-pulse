@@ -8,6 +8,7 @@ from .common import (
     short_ipo_label,
     signed_pct,
     to_ist,
+    trend_emoji,
 )
 
 
@@ -15,11 +16,10 @@ def _idx_line(name: str, q) -> str:
     return f"• {name}: {fmt_num(q.last)} ({signed_pct(q.change_pct)})"
 
 
-def _mover_line(m, *, gain: bool) -> str:
-    arrow = "↑" if gain else "↓"
+def _mover_line(m) -> str:
     name = m.symbol if len(m.symbol) <= 12 else m.symbol[:11] + "…"
     ratio = "" if m.volume_ratio is None else f" ({m.volume_ratio:.1f}x)"
-    return f"{arrow} {name} {signed_pct(m.change_pct, places=1)}{ratio}"
+    return f"{trend_emoji(m.change_pct)} {name} {signed_pct(m.change_pct, places=1)}{ratio}"
 
 
 def format_linkedin(b: PulseBriefing) -> str:
@@ -50,9 +50,9 @@ def format_linkedin(b: PulseBriefing) -> str:
 
     mover_block = "Top movers (Nifty 500)"
     for m in b.movers.gainers[:3]:
-        mover_block += "\n" + _mover_line(m, gain=True)
+        mover_block += "\n" + _mover_line(m)
     for m in b.movers.losers[:3]:
-        mover_block += "\n" + _mover_line(m, gain=False)
+        mover_block += "\n" + _mover_line(m)
     sections.append(mover_block)
 
     mq = b.macro

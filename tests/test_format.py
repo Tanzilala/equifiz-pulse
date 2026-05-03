@@ -134,8 +134,9 @@ def test_trend_arrow_unicode():
 
 
 def test_trend_emoji():
-    assert trend_emoji(0.5) == "🔺"
-    assert trend_emoji(-0.5) == "🔻"
+    assert trend_emoji(0.5) == "🟢"
+    assert trend_emoji(-0.5) == "🔴"
+    assert trend_emoji(0.0) == "⚪"
 
 
 def test_short_ipo_label_strips_limited():
@@ -212,10 +213,14 @@ def test_telegram_starts_with_pulse_header(briefing):
     assert text.startswith("*Equifiz Pulse · ")
 
 
-def test_telegram_uses_emojis(briefing):
+def test_telegram_uses_color_indicators(briefing):
     text = format_telegram(briefing)
-    assert "🔺" in text
-    assert "🔻" in text
+    # Briefing has both gainers (positive %) and losers (negative %)
+    assert "🟢" in text
+    assert "🔴" in text
+    # No more red-triangle artefacts
+    assert "🔺" not in text
+    assert "🔻" not in text
 
 
 def test_telegram_no_commentary(briefing):
@@ -252,7 +257,7 @@ def test_whatsapp_no_markdown(briefing):
 
 def test_whatsapp_no_emojis(briefing):
     text = format_whatsapp(briefing)
-    for ch in ("🔺", "🔻", "📈", "💸", "🌐", "📊", "📜", "👀", "🚀"):
+    for ch in ("🟢", "🔴", "⚪", "🔺", "🔻", "📈", "💸", "🌐", "📊", "📜", "👀", "🚀"):
         assert ch not in text
 
 

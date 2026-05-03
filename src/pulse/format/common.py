@@ -79,8 +79,14 @@ def trend_arrow_unicode(pct: float) -> str:
 
 
 def trend_emoji(pct: float) -> str:
+    """Color-coded trend marker — green for up, red for down.
+
+    Plain Unicode arrows aren't green/red anywhere; emoji triangles like
+    🔺/🔻 are both red. Colored circles paired with the signed % give the
+    cleanest "green = up / red = down" read across LinkedIn and Telegram.
+    """
     if pct > 0.05:
-        return "🔺"
+        return "🟢"
     if pct < -0.05:
-        return "🔻"
-    return "➡️"
+        return "🔴"
+    return "⚪"
