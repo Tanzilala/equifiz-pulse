@@ -1,12 +1,9 @@
 name: Daily Pulse
 
 on:
-  schedule:
-    # 02:50 UTC = 08:20 IST. ~55-min buffer before market open at 09:15 IST.
-    # GitHub Actions cron can drift up to ~15 min under load — schedule
-    # earlier than your hard deadline.
-    - cron: '50 2 * * 1-5'
-  # Allow manual triggers from the Actions tab too.
+  # NOTE: cron disabled — NSE blocks GitHub's US/EU datacenter IPs (403).
+  # Daily auto-post runs on the Hostinger VPS in Mumbai (Indian IP) instead.
+  # See scripts/deploy-vps.sh.  Manual triggers from the Actions tab still work.
   workflow_dispatch:
     inputs:
       only:

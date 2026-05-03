@@ -74,7 +74,9 @@ Every `pulse run` writes one JSON line to `logs/pulse-YYYY-MM.jsonl` with starte
 
 Three ways to run this daily, pick one:
 
-### A. GitHub Actions (recommended for cloud)
+> **Note on GitHub Actions cron:** GitHub's runners live in US/EU datacenters and NSE blocks those IPs (403 anti-bot). **Use Option C (VPS in India).** GitHub Actions still works for manual triggers from the UI but the daily cron is disabled.
+
+### A. GitHub Actions (manual triggers only — cron blocked by NSE)
 
 A workflow lives at [.github/workflows/daily-pulse.yml](.github/workflows/daily-pulse.yml) — fires at **02:50 UTC (08:20 IST)** Mon-Fri, runs `pulse run --only telegram --confirm`.
 
@@ -102,12 +104,17 @@ uv run pulse install-schedule --time 08:30 --apply   # creates the task
 
 Installs a Windows Scheduled Task `EquifizPulseDaily`.
 
-### C. VPS cron
+### C. VPS cron in India (recommended)
 
-Any always-on Linux box ($5/mo Hetzner / DigitalOcean works). After cloning the repo and running `uv sync`:
+Any always-on Linux box with an Indian IP. Hostinger Mumbai, AWS ap-south-1, Linode India, etc.
 
-```cron
-50 2 * * 1-5 cd /path/to/equifiz-pulse && /usr/local/bin/uv run pulse run --confirm >> logs/cron.log 2>&1
+```bash
+# On the VPS:
+curl -sSL https://raw.githubusercontent.com/Tanzilala/equifiz-pulse/main/scripts/deploy-vps.sh | bash
+echo 'N8N_TELEGRAM_WEBHOOK=https://your-n8n/webhook/equifiz-pulse-telegram' > /opt/equifiz-pulse/.env
+sudo timedatectl set-timezone Asia/Kolkata
+crontab -e
+# paste the line the script printed
 ```
 
-(02:50 UTC = 08:20 IST. Set system TZ to IST and use `30 8 * * 1-5` for cleaner local-time editing.)
+Full walkthrough is in [scripts/deploy-vps.sh](scripts/deploy-vps.sh) itself.
