@@ -114,7 +114,32 @@ curl -sSL https://raw.githubusercontent.com/Tanzilala/equifiz-pulse/main/scripts
 echo 'N8N_TELEGRAM_WEBHOOK=https://your-n8n/webhook/equifiz-pulse-telegram' > /opt/equifiz-pulse/.env
 sudo timedatectl set-timezone Asia/Kolkata
 crontab -e
-# paste the line the script printed
+# paste the cron block the script printed
 ```
 
-Full walkthrough is in [scripts/deploy-vps.sh](scripts/deploy-vps.sh) itself.
+The cron block schedules pulse every 30 min between 18:00 and 22:30 IST plus a safety-net retry at 08:30 next morning. Pulse uses `--skip-if-stale` and `--once-per-day` so it only posts when fresh FII/DII data is available, and only once per day.
+
+Full walkthrough is in [scripts/deploy-vps.sh](scripts/deploy-vps.sh).
+
+## Skip-if-stale + once-per-day
+
+Two flags that change *when* `pulse run` actually posts:
+
+```bash
+# Exit cleanly (no post) if NSE hasn't published today's FII/DII figures yet.
+uv run pulse run --only telegram --skip-if-stale --confirm
+
+# Skip if a successful post was already made today (uses logs/markers/posted-YYYY-MM-DD.marker).
+uv run pulse run --only telegram --once-per-day --confirm
+
+# Combined — what the cron uses. Run every 30 min in the evening; the first
+# tick after NSE publishes posts and writes the marker, the rest skip.
+uv run pulse run --only telegram --skip-if-stale --once-per-day --confirm
+```
+
+A "stale" run logs `error: stale_fii_data: got 2026-04-30, expected 2026-05-03` and exits 0 (success — nothing to do). Same for "already posted" runs. So scheduled retries don't pollute the log with errors.
+
+To force a re-post on a day, delete the marker:
+```bash
+rm logs/markers/posted-YYYY-MM-DD.marker
+```

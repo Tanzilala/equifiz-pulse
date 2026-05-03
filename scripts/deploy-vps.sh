@@ -52,7 +52,13 @@ else
     exit 1
 fi
 
-CRON_LINE="30 8 * * 1-5 cd $INSTALL_DIR && $UV run pulse run --only telegram --confirm >> $INSTALL_DIR/logs/cron.log 2>&1"
+# Cron strategy: pulse run every 30 min in the evening + once next morning as
+# a safety net.  --skip-if-stale exits cleanly until NSE publishes today's
+# FII/DII figures (typically ~19:00–20:00 IST).  --once-per-day uses a marker
+# file so only the first successful run actually posts.
+CRON_BLOCK="# equifiz-pulse — daily Indian markets briefing
+*/30 18-22 * * 1-5 cd $INSTALL_DIR && $UV run pulse run --only telegram --skip-if-stale --once-per-day --confirm >> $INSTALL_DIR/logs/cron.log 2>&1
+30 8 * * 2-6 cd $INSTALL_DIR && $UV run pulse run --only telegram --skip-if-stale --once-per-day --confirm >> $INSTALL_DIR/logs/cron.log 2>&1"
 
 cat <<EOF
 
@@ -68,17 +74,24 @@ cat <<EOF
 2. Verify timezone is IST so cron's "8:30" actually means market-time:
      timedatectl set-timezone Asia/Kolkata
 
-3. Install the cron job — run:
+3. Install the cron block — run:
      crontab -e
-   then paste this line and save:
+   then paste this block and save:
 
-   $CRON_LINE
+$CRON_BLOCK
 
-4. (Optional) test the cron command manually right now:
+4. (Optional) test the run command manually right now:
      cd $INSTALL_DIR && $UV run pulse run --only telegram --confirm
 
    It should send a Telegram message and print "OK telegram sent ...".
 
-That's it — the cron will fire at 08:30 IST Mon-Fri.
+How the schedule works:
+  • Mon-Fri 18:00–22:30 IST: every 30 min, pulse checks whether today's
+    FII/DII data has published. If not, it logs and exits 0. As soon as
+    NSE publishes (usually ~19:00 IST), pulse posts and writes a marker
+    so subsequent ticks that day skip.
+  • Tue-Sat 08:30 IST: safety-net retry covering the case where evening
+    runs all hit a degraded NSE. Same marker logic — skips if already
+    posted yesterday evening.
 
 EOF

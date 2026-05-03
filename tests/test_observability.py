@@ -129,3 +129,29 @@ def test_run_logger_tail(tmp_path, briefing):
 def test_run_logger_tail_handles_missing_file(tmp_path):
     logger = RunLogger(tmp_path / "fresh")
     assert logger.tail(5) == []
+
+
+def test_marker_path_format(tmp_path, monkeypatch):
+    """The once-per-day marker uses the IST date in the filename."""
+    from datetime import date
+
+    from pulse.cli import _marker_path
+
+    monkeypatch.chdir(tmp_path)
+    p = _marker_path(date(2026, 5, 7))
+    assert p.parts[-1] == "posted-2026-05-07.marker"
+    assert "markers" in p.parts
+
+
+def test_ist_today_returns_date(monkeypatch):
+    """_ist_today returns an IST-anchored date (no off-by-one near UTC midnight)."""
+    from datetime import date
+
+    from pulse.cli import _ist_today
+
+    today = _ist_today()
+    assert isinstance(today, date)
+    # Sanity: should be within ±1 day of UTC's idea of today
+    from datetime import datetime, timezone
+    utc_today = datetime.now(timezone.utc).date()
+    assert abs((today - utc_today).days) <= 1

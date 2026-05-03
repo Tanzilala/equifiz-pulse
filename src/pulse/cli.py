@@ -113,6 +113,16 @@ CHANNEL_TO_ENV = {
 }
 
 
+def _ist_today() -> "date":
+    from datetime import date, timezone
+    from zoneinfo import ZoneInfo
+    return datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Kolkata")).date()
+
+
+def _marker_path(ist_today: "date") -> Path:
+    return Path("logs") / "markers" / f"posted-{ist_today.isoformat()}.marker"
+
+
 @main.command()
 @click.option(
     "--only",
@@ -125,7 +135,17 @@ CHANNEL_TO_ENV = {
     is_flag=True,
     help="Actually POST to webhooks. Without this flag, the command is a dry run.",
 )
-def run(only: str | None, confirm: bool) -> None:
+@click.option(
+    "--skip-if-stale",
+    is_flag=True,
+    help="Exit cleanly (no post) if FII/DII data isn't dated to today's IST session.",
+)
+@click.option(
+    "--once-per-day",
+    is_flag=True,
+    help="Exit cleanly if we've already posted successfully today (uses logs/markers/).",
+)
+def run(only: str | None, confirm: bool, skip_if_stale: bool, once_per_day: bool) -> None:
     """Build today's briefing and post to n8n webhooks."""
     console = Console(force_terminal=True, width=160, legacy_windows=False)
     logger = RunLogger()
@@ -161,6 +181,25 @@ def run(only: str | None, confirm: bool) -> None:
             "Pass [bold]--confirm[/] to send."
         )
 
+    ist_today = _ist_today()
+
+    # `--once-per-day` short-circuits before fetching: if we already posted today,
+    # no point hammering NSE/Yahoo just to throw the result away.
+    if once_per_day and confirm:
+        marker = _marker_path(ist_today)
+        if marker.exists():
+            console.print(
+                f"[yellow]SKIP (already posted):[/] marker {marker.name} exists. "
+                f"Delete it to force a re-post."
+            )
+            logger.write(build_run_entry(
+                started_at=started_at, finished_at=datetime.now(timezone.utc),
+                confirm=confirm, only=only, narrative_source="-",
+                briefing=None, posts=[],
+                error=f"already_posted_today: {marker.name}", exit_code=0,
+            ))
+            return
+
     try:
         briefing = asyncio.run(build_briefing())
     except Exception as e:
@@ -172,6 +211,21 @@ def run(only: str | None, confirm: bool) -> None:
             error=f"{type(e).__name__}: {e}", exit_code=1,
         ))
         raise SystemExit(1)
+
+    if skip_if_stale and briefing.flows.cash.date != ist_today:
+        console.print(
+            f"[yellow]SKIP (stale data):[/] FII/DII data is from "
+            f"{briefing.flows.cash.date}, expected {ist_today}. "
+            f"NSE typically publishes today's figures by ~19:30 IST after close."
+        )
+        logger.write(build_run_entry(
+            started_at=started_at, finished_at=datetime.now(timezone.utc),
+            confirm=confirm, only=only, narrative_source="-",
+            briefing=briefing, posts=[],
+            error=f"stale_fii_data: got {briefing.flows.cash.date}, expected {ist_today}",
+            exit_code=0,
+        ))
+        return
 
     narrative_source = "none"
 
@@ -217,6 +271,14 @@ def run(only: str | None, confirm: bool) -> None:
             )
 
     exit_code = 1 if failed else 0
+
+    # Write the once-per-day marker only if all targeted posts succeeded —
+    # partial success leaves the day unmarked so the next cron tick can retry.
+    if once_per_day and confirm and exit_code == 0:
+        marker = _marker_path(ist_today)
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+
     logger.write(build_run_entry(
         started_at=started_at, finished_at=datetime.now(timezone.utc),
         confirm=confirm, only=only, narrative_source=narrative_source,
