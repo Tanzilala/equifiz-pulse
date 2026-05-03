@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import html
+import re
 from datetime import datetime, timezone
 from typing import Optional
 from xml.etree import ElementTree as ET
@@ -45,7 +46,69 @@ SOURCES: dict[str, str] = {
     "Mint": "https://www.livemint.com/rss/markets",
 }
 
+# Order matters for dedup: when two sources cover the same story, the
+# earlier source in this tuple keeps the headline.
+SOURCE_ORDER = ("Business Standard", "Economic Times", "Mint")
+
 DEFAULT_PER_SOURCE = 11
+FETCH_BUFFER = 9  # over-fetch so dedup + clickbait filter still leaves N items
+
+# Phrases / patterns that signal listicle / stock-tip clickbait, not news.
+_CLICKBAIT_PATTERNS = [
+    re.compile(p, re.I)
+    for p in (
+        # Stock-tip listicles
+        r"\bdo you own\b",
+        r"\bbuy or sell\b",
+        r"\bstocks? to buy\b",
+        r"\bstocks? to sell\b",
+        r"\brecommends?\s+\w+\s+stocks?\b",
+        r"\bcheck (?:the )?full list\b",
+        r"\bcheck (?:the )?list\b",
+        r"\b\d+ (?:penny|largecap|smallcap|midcap|multibagger) stocks?\b",
+        r"\bshould you (?:buy|sell|invest|hold)\b",
+        r"\b(?:rally|surged?|soared?|jumped?|gained?) up to \d+%\b",
+        r"\bstocks? rally up to\b",
+        # "₹1 lakh became ₹1 crore" promo headlines
+        r"\bmultibagger\s+(?:penny\s+)?stocks?\b",
+        r"\bturns? .{0,3}₹[\d,.]+\s+(?:lakh|crore)\s+into\b",
+        # Election listicles & non-business sports
+        r"\btop \d+ seats?\b",
+        r"\bassembly elections?\b",
+        r"\bcricket\b",
+        r"\b(?:CSK|RCB|MI|KKR|DC|GT|LSG|PBKS|SRH|RR)\s+vs\b",
+        r"\bMUN\s+vs\s+LIV\b",
+    )
+]
+
+# Stopwords for Jaccard tokenization in cross-source dedup.
+_STOPWORDS = {
+    "the", "a", "an", "of", "in", "at", "on", "to", "for", "and", "or",
+    "is", "are", "be", "by", "with", "as", "from", "this", "that", "it",
+    "its", "has", "have", "will", "may", "after", "amid", "over", "up",
+    "down", "out", "into", "onto",
+}
+
+
+def is_clickbait(title: str) -> bool:
+    """True if the headline matches any known clickbait pattern."""
+    return any(p.search(title) for p in _CLICKBAIT_PATTERNS)
+
+
+def _tokenize(s: str) -> set[str]:
+    """Significant words for similarity comparison: lowercased letters only,
+    drop stopwords, drop short tokens (<=2 chars)."""
+    return {
+        w
+        for w in re.findall(r"[a-zA-Z]+", s.lower())
+        if len(w) > 2 and w not in _STOPWORDS
+    }
+
+
+def _jaccard(a: set[str], b: set[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
 
 
 class NewsItem(BaseModel):
@@ -74,7 +137,7 @@ def _clean_title(s: str) -> str:
 
 
 def parse_news_rss(xml_text: str, source: str, *, limit: int) -> list[NewsItem]:
-    """Pure: take the first `limit` items from an RSS 2.0 feed."""
+    """Pure: take the first `limit` non-clickbait items from an RSS 2.0 feed."""
     root = ET.fromstring(xml_text)
     items: list[NewsItem] = []
     for it in root.findall(".//item"):
@@ -83,12 +146,43 @@ def parse_news_rss(xml_text: str, source: str, *, limit: int) -> list[NewsItem]:
         link = (it.findtext("link") or "").strip()
         if not (title and link):
             continue
+        if is_clickbait(title):
+            continue
         pubdate_raw = it.findtext("pubDate") or ""
         pub = _parse_pubdate(pubdate_raw) if pubdate_raw else None
         items.append(NewsItem(source=source, title=title, url=link, published=pub))
         if len(items) >= limit:
             break
     return items
+
+
+def dedup_across_sources(
+    by_source: dict[str, list[NewsItem]],
+    *,
+    per_source: int,
+    threshold: float = 0.5,
+) -> dict[str, list[NewsItem]]:
+    """Drop near-duplicate stories from later sources (per SOURCE_ORDER).
+
+    Two titles are considered the same story if their token-set Jaccard
+    similarity is at or above `threshold`. The first occurrence (earlier
+    source) wins; subsequent matches are dropped.
+    """
+    seen: list[set[str]] = []
+    out: dict[str, list[NewsItem]] = {}
+    for source in SOURCE_ORDER:
+        items = by_source.get(source, [])
+        kept: list[NewsItem] = []
+        for item in items:
+            tokens = _tokenize(item.title)
+            if any(_jaccard(tokens, prev) >= threshold for prev in seen):
+                continue
+            seen.append(tokens)
+            kept.append(item)
+            if len(kept) >= per_source:
+                break
+        out[source] = kept
+    return out
 
 
 async def _fetch_one(
@@ -107,29 +201,39 @@ async def fetch_news(
     per_source: int = DEFAULT_PER_SOURCE,
     http: Optional[httpx.AsyncClient] = None,
 ) -> NewsSnapshot:
+    """Fetch + clickbait-filter + cross-source dedup.
+
+    We over-fetch by FETCH_BUFFER per source so that the dedup pass can
+    backfill: if BS and ET both cover a story, ET drops it but still has
+    enough items to reach `per_source` from its remaining queue.
+    """
+    fetch_n = per_source + FETCH_BUFFER
+
     owns_http = http is None
     if http is None:
         http = httpx.AsyncClient(
             headers=_NEWS_HEADERS, follow_redirects=True, timeout=15.0
         )
 
-    by_source: dict[str, list[NewsItem]] = {}
+    raw_by_source: dict[str, list[NewsItem]] = {}
     unavailable: list[str] = []
 
     try:
         results = await asyncio.gather(
-            *(_fetch_one(http, src, url, per_source) for src, url in SOURCES.items())
+            *(_fetch_one(http, src, url, fetch_n) for src, url in SOURCES.items())
         )
         for source, result in results:
             if isinstance(result, Exception):
                 unavailable.append(f"{source}: {type(result).__name__}: {result}")
             elif result:
-                by_source[source] = result
+                raw_by_source[source] = result
             else:
                 unavailable.append(f"{source}: returned 0 items")
     finally:
         if owns_http:
             await http.aclose()
+
+    by_source = dedup_across_sources(raw_by_source, per_source=per_source)
 
     return NewsSnapshot(
         fetched_at=datetime.now(timezone.utc),
