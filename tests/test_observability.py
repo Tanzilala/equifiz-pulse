@@ -72,9 +72,10 @@ def briefing(request) -> PulseBriefing:
         macro=MacroSnapshot(
             fetched_at=fa,
             usdinr=_macro("INR=X", "USDINR", 1, 1),
+            dxy=_macro("DX-Y.NYB", "DXY", 1, 1),
             brent=_macro("BZ=F", "Brent", 1, 1),
             gold=_macro("GC=F", "Gold", 1, 1),
-            us10y=_macro("^TNX", "10Y", 1, 1),
+            india_gsec_10y=_macro("IN10Y", "India 10Y", 1, 1),
         ),
     )
 

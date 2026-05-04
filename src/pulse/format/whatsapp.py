@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..models import PulseBriefing
-from .common import crore, fmt_num, short_ipo_label, signed_pct, to_ist
+from .common import crore, crore_unsigned, fmt_num, gold_inr_per_10g, signed_pct, to_ist
 
 
 def format_whatsapp(b: PulseBriefing) -> str:
@@ -20,7 +20,8 @@ def format_whatsapp(b: PulseBriefing) -> str:
     cash = b.flows.cash
     sections.append(
         f"FLOWS (Rs cr · {cash.date.strftime('%d %b')})\n"
-        f"FII {crore(cash.fii_net)} | DII {crore(cash.dii_net)}"
+        f"FII  buy {crore_unsigned(cash.fii_buy)} | sell {crore_unsigned(cash.fii_sell)} | net {crore(cash.fii_net)}\n"
+        f"DII  buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)} | net {crore(cash.dii_net)}"
     )
 
     g = " | ".join(f"{m.symbol} {m.change_pct:+.1f}%" for m in b.movers.gainers[:3])
@@ -28,22 +29,13 @@ def format_whatsapp(b: PulseBriefing) -> str:
     sections.append(f"TOP MOVERS\nUp: {g}\nDown: {l}")
 
     mq = b.macro
+    gold_inr_10g = gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
     sections.append(
         "MACRO\n"
-        f"USDINR {fmt_num(mq.usdinr.last)} | Brent {fmt_num(mq.brent.last)} | "
-        f"Gold {fmt_num(mq.gold.last)} | US10Y {fmt_num(mq.us10y.last)}%"
+        f"USDINR {fmt_num(mq.usdinr.last)} | DXY {fmt_num(mq.dxy.last)} | "
+        f"Brent {fmt_num(mq.brent.last)}\n"
+        f"Gold ${fmt_num(mq.gold.last)} / Rs {fmt_num(gold_inr_10g, places=0)}/10g | "
+        f"India G-Sec 10Y {fmt_num(mq.india_gsec_10y.last)}%"
     )
-
-    ipo_lines: list[str] = []
-    for it in b.regulatory.items:
-        if it.source != "NSE-IPO":
-            continue
-        label = short_ipo_label(it.title)
-        if label:
-            ipo_lines.append(label)
-        if len(ipo_lines) == 3:
-            break
-    if ipo_lines:
-        sections.append("IPOS\n" + "\n".join(ipo_lines))
 
     return "\n\n".join(sections)

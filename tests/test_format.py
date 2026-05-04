@@ -88,9 +88,10 @@ def briefing() -> PulseBriefing:
     macro = MacroSnapshot(
         fetched_at=datetime(2026, 5, 3, 3, 0, tzinfo=timezone.utc),
         usdinr=_macro_q("INR=X", "USDINR", 94.88, 94.9166),
+        dxy=_macro_q("DX-Y.NYB", "Dollar Index", 98.31, 98.16),
         brent=_macro_q("BZ=F", "Brent", 108.17, 108.10),
         gold=_macro_q("GC=F", "Gold (USD/oz)", 4644.50, 4629.90),
-        us10y=_macro_q("^TNX", "US 10Y Yield (%)", 4.38, 4.39),
+        india_gsec_10y=_macro_q("IN10Y", "India G-Sec 10Y (%)", 7.02, 7.05),
     )
     regulatory = RegulatorySnapshot(
         fetched_at=datetime(2026, 5, 3, 3, 0, tzinfo=timezone.utc),
@@ -193,11 +194,38 @@ def test_linkedin_volume_ratios_rendered(briefing):
     assert "CEMPRO" in text
 
 
-def test_linkedin_ipos_use_short_label(briefing):
+def test_linkedin_drops_ipo_section(briefing):
+    """IPOs were intentionally removed from the briefing."""
     text = format_linkedin(briefing)
-    assert "Upcoming IPOs" in text
-    assert "Bagmane Prime Office REIT" in text
+    assert "Upcoming IPOs" not in text
     assert "[NSE-IPO]" not in text
+
+
+def test_linkedin_shows_full_fii_dii(briefing):
+    text = format_linkedin(briefing)
+    # FII fixture: buy=15049.55  sell=23097.41  net=-8047.86
+    assert "buy 15,050" in text
+    assert "sell 23,097" in text
+    assert "net -8,048" in text
+
+
+def test_linkedin_shows_dollar_index(briefing):
+    text = format_linkedin(briefing)
+    assert "Dollar Index" in text
+    assert "98.31" in text
+
+
+def test_linkedin_shows_india_gsec_not_us(briefing):
+    text = format_linkedin(briefing)
+    assert "India G-Sec 10Y" in text
+    assert "7.02" in text
+    assert "US 10Y" not in text
+
+
+def test_linkedin_shows_gold_in_inr_per_10g(briefing):
+    text = format_linkedin(briefing)
+    # Gold $4644.50 × USDINR 94.88 / 31.1035 × 10 ≈ ₹141,679/10g
+    assert "₹141,679/10g" in text
 
 
 def test_linkedin_section_separation_uses_double_blank(briefing):

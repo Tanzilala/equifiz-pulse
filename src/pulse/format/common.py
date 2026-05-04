@@ -55,6 +55,20 @@ def crore(v: float) -> str:
     return f"{v:+,.0f}"
 
 
+def crore_unsigned(v: float) -> str:
+    """Format a ₹ crore figure as a positive magnitude (for buy/sell columns)."""
+    return f"{v:,.0f}"
+
+
+# 1 troy ounce = 31.1034768 grams. Indian gold market quotes ₹/10g.
+_GRAMS_PER_OZ = 31.1034768
+
+
+def gold_inr_per_10g(usd_per_oz: float, usdinr_rate: float) -> float:
+    """Convert COMEX gold (USD/oz) to the Indian wholesale equivalent in ₹/10g."""
+    return (usd_per_oz * usdinr_rate / _GRAMS_PER_OZ) * 10
+
+
 def vol_ratio(ratio: float | None) -> str:
     if ratio is None:
         return ""

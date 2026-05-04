@@ -139,12 +139,13 @@ class MacroSnapshot(BaseModel):
 
     fetched_at: datetime
     usdinr: MacroQuote
+    dxy: MacroQuote
     brent: MacroQuote
     gold: MacroQuote
-    us10y: MacroQuote
+    india_gsec_10y: MacroQuote
 
     def all(self) -> list[MacroQuote]:
-        return [self.usdinr, self.brent, self.gold, self.us10y]
+        return [self.usdinr, self.dxy, self.brent, self.gold, self.india_gsec_10y]
 
 
 # ---------- Briefing ----------

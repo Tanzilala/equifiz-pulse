@@ -4,8 +4,9 @@ from __future__ import annotations
 from ..models import PulseBriefing
 from .common import (
     crore,
+    crore_unsigned,
     fmt_num,
-    short_ipo_label,
+    gold_inr_per_10g,
     signed_pct,
     to_ist,
     trend_emoji,
@@ -40,13 +41,14 @@ def format_linkedin(b: PulseBriefing) -> str:
     )
 
     cash = b.flows.cash
-    flow = (
-        f"Flows (₹ cr · {cash.date.strftime('%d %b')})\n"
-        f"• FII {crore(cash.fii_net)}   • DII {crore(cash.dii_net)}"
-    )
+    flow_lines = [
+        f"Flows (₹ cr · {cash.date.strftime('%d %b')})",
+        f"• FII   buy {crore_unsigned(cash.fii_buy)}   sell {crore_unsigned(cash.fii_sell)}   net {crore(cash.fii_net)}",
+        f"• DII   buy {crore_unsigned(cash.dii_buy)}   sell {crore_unsigned(cash.dii_sell)}   net {crore(cash.dii_net)}",
+    ]
     if b.flows.fno and b.flows.fno.index_futures_net is not None:
-        flow += f"\n• FII Index Futures: {crore(b.flows.fno.index_futures_net)}"
-    sections.append(flow)
+        flow_lines.append(f"• FII Index Futures net: {crore(b.flows.fno.index_futures_net)}")
+    sections.append("\n".join(flow_lines))
 
     mover_block = "Top movers (Nifty 500)"
     for m in b.movers.gainers[:3]:
@@ -56,24 +58,14 @@ def format_linkedin(b: PulseBriefing) -> str:
     sections.append(mover_block)
 
     mq = b.macro
+    gold_inr_10g = gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
     sections.append(
         "Macro\n"
         f"• USDINR {fmt_num(mq.usdinr.last)} ({signed_pct(mq.usdinr.change_pct)})\n"
+        f"• Dollar Index {fmt_num(mq.dxy.last)} ({signed_pct(mq.dxy.change_pct)})\n"
         f"• Brent ${fmt_num(mq.brent.last)} ({signed_pct(mq.brent.change_pct)})\n"
-        f"• Gold ${fmt_num(mq.gold.last)} ({signed_pct(mq.gold.change_pct)})\n"
-        f"• US 10Y {fmt_num(mq.us10y.last)}% ({signed_pct(mq.us10y.change_pct)})"
+        f"• Gold ${fmt_num(mq.gold.last)} / ₹{fmt_num(gold_inr_10g, places=0)}/10g ({signed_pct(mq.gold.change_pct)})\n"
+        f"• India G-Sec 10Y {fmt_num(mq.india_gsec_10y.last)}% ({signed_pct(mq.india_gsec_10y.change_pct)})"
     )
-
-    ipo_lines: list[str] = []
-    for it in b.regulatory.items:
-        if it.source != "NSE-IPO":
-            continue
-        label = short_ipo_label(it.title)
-        if label:
-            ipo_lines.append(f"• {label}")
-        if len(ipo_lines) == 3:
-            break
-    if ipo_lines:
-        sections.append("Upcoming IPOs\n" + "\n".join(ipo_lines))
 
     return "\n\n\n".join(sections)

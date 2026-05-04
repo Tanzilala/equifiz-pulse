@@ -66,9 +66,10 @@ def briefing() -> PulseBriefing:
         macro=MacroSnapshot(
             fetched_at=fa,
             usdinr=_macro_q("INR=X", "USDINR", 84.5, 84.4),
+            dxy=_macro_q("DX-Y.NYB", "Dollar Index", 98.5, 98.3),
             brent=_macro_q("BZ=F", "Brent", 80.0, 79.5),
             gold=_macro_q("GC=F", "Gold (USD/oz)", 2700, 2690),
-            us10y=_macro_q("^TNX", "US 10Y Yield (%)", 4.3, 4.31),
+            india_gsec_10y=_macro_q("IN10Y", "India G-Sec 10Y (%)", 7.02, 7.05),
         ),
     )
 
