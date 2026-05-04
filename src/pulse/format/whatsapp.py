@@ -24,12 +24,17 @@ def format_whatsapp(b: PulseBriefing) -> str:
         f"DII  buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)} | net {crore(cash.dii_net)}"
     )
 
-    g = " | ".join(f"{m.symbol} {m.change_pct:+.1f}%" for m in b.movers.gainers[:3])
-    l = " | ".join(f"{m.symbol} {m.change_pct:+.1f}%" for m in b.movers.losers[:3])
-    sections.append(f"TOP MOVERS\nUp: {g}\nDown: {l}")
+    gainers_lines = "\n".join(
+        f"{m.symbol} {m.change_pct:+.1f}%" for m in b.movers.gainers[:3]
+    )
+    losers_lines = "\n".join(
+        f"{m.symbol} {m.change_pct:+.1f}%" for m in b.movers.losers[:3]
+    )
+    sections.append(f"TOP GAINERS\n{gainers_lines}")
+    sections.append(f"TOP LOSERS\n{losers_lines}")
 
     mq = b.macro
-    gold_inr_10g = gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
+    gold_inr_10g = mq.gold_inr_per_10g or gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
     sections.append(
         "MACRO\n"
         f"USDINR {fmt_num(mq.usdinr.last)} | DXY {fmt_num(mq.dxy.last)} | "

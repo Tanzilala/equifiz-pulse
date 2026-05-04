@@ -45,6 +45,13 @@ _INVESTING_PCT = re.compile(
     r'data-test="instrument-price-change-percent"[^>]*>\s*\(?\s*(-?\+?[\d.]+)%?\s*\)?\s*<'
 )
 
+# Indian Bullion and Jewellers Association — official Indian gold rate per gram
+# of 999 (24K) fine gold. Multiply by 10 for the standard ₹/10g quote.
+IBJA_URL = "https://ibja.co/"
+_IBJA_FINE_GOLD_999 = re.compile(
+    r'id="lblFineGold999">\s*₹\s*([\d,]+(?:\.\d+)?)'
+)
+
 
 class MacroError(RuntimeError):
     pass
@@ -125,14 +132,38 @@ async def _fetch_india_gsec(http: httpx.AsyncClient) -> MacroQuote:
     return parse_investing_yield(r.text)
 
 
+def parse_ibja_gold(html: str) -> Optional[float]:
+    """Pure: extract ₹/gram (999 fine gold) from IBJA homepage HTML."""
+    m = _IBJA_FINE_GOLD_999.search(html)
+    if not m:
+        return None
+    try:
+        return float(m.group(1).replace(",", ""))
+    except ValueError:
+        return None
+
+
+async def _fetch_ibja_gold_per_10g(http: httpx.AsyncClient) -> Optional[float]:
+    """Best-effort fetch of IBJA's official 999 fine-gold rate, returned as ₹/10g.
+    Returns None if IBJA is unreachable or the page format changes."""
+    try:
+        r = await http.get(IBJA_URL, headers=_INVESTING_HEADERS, timeout=15.0)
+        r.raise_for_status()
+    except httpx.HTTPError:
+        return None
+    per_gram = parse_ibja_gold(r.text)
+    return per_gram * 10 if per_gram is not None else None
+
+
 async def fetch_macro(http: Optional[httpx.AsyncClient] = None) -> MacroSnapshot:
     owns = http is None
     if http is None:
         http = httpx.AsyncClient(headers=HEADERS, follow_redirects=True)
     try:
-        yahoo_results, india_gsec = await asyncio.gather(
+        yahoo_results, india_gsec, gold_inr_per_10g = await asyncio.gather(
             asyncio.gather(*(_fetch_one_yahoo(http, sym, name) for sym, name, _ in TICKERS)),
             _fetch_india_gsec(http),
+            _fetch_ibja_gold_per_10g(http),
         )
     finally:
         if owns:
@@ -145,4 +176,5 @@ async def fetch_macro(http: Optional[httpx.AsyncClient] = None) -> MacroSnapshot
         brent=by_attr["brent"],
         gold=by_attr["gold"],
         india_gsec_10y=india_gsec,
+        gold_inr_per_10g=gold_inr_per_10g,
     )

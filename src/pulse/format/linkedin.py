@@ -19,8 +19,7 @@ def _idx_line(name: str, q) -> str:
 
 def _mover_line(m) -> str:
     name = m.symbol if len(m.symbol) <= 12 else m.symbol[:11] + "…"
-    ratio = "" if m.volume_ratio is None else f" ({m.volume_ratio:.1f}x)"
-    return f"{trend_emoji(m.change_pct)} {name} {signed_pct(m.change_pct, places=1)}{ratio}"
+    return f"{trend_emoji(m.change_pct)} {name} {signed_pct(m.change_pct, places=1)}"
 
 
 def format_linkedin(b: PulseBriefing) -> str:
@@ -50,15 +49,18 @@ def format_linkedin(b: PulseBriefing) -> str:
         flow_lines.append(f"• FII Index Futures net: {crore(b.flows.fno.index_futures_net)}")
     sections.append("\n".join(flow_lines))
 
-    mover_block = "Top movers (Nifty 500)"
+    gainers_block = "Top Gainers (Nifty 500)"
     for m in b.movers.gainers[:3]:
-        mover_block += "\n" + _mover_line(m)
+        gainers_block += "\n" + _mover_line(m)
+    sections.append(gainers_block)
+
+    losers_block = "Top Losers (Nifty 500)"
     for m in b.movers.losers[:3]:
-        mover_block += "\n" + _mover_line(m)
-    sections.append(mover_block)
+        losers_block += "\n" + _mover_line(m)
+    sections.append(losers_block)
 
     mq = b.macro
-    gold_inr_10g = gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
+    gold_inr_10g = mq.gold_inr_per_10g or gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
     sections.append(
         "Macro\n"
         f"• USDINR {fmt_num(mq.usdinr.last)} ({signed_pct(mq.usdinr.change_pct)})\n"

@@ -143,6 +143,7 @@ class MacroSnapshot(BaseModel):
     brent: MacroQuote
     gold: MacroQuote
     india_gsec_10y: MacroQuote
+    gold_inr_per_10g: Optional[float] = None  # from IBJA (India's official source); None ⇒ compute
 
     def all(self) -> list[MacroQuote]:
         return [self.usdinr, self.dxy, self.brent, self.gold, self.india_gsec_10y]

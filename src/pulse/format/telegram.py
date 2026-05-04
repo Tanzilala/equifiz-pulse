@@ -10,7 +10,6 @@ from .common import (
     signed_pct,
     to_ist,
     trend_emoji,
-    vol_ratio,
 )
 
 
@@ -46,15 +45,18 @@ def format_telegram(b: PulseBriefing) -> str:
         flow_lines.append(f"• FII Idx Fut net: `{crore(b.flows.fno.index_futures_net)}`")
     sections.append("\n".join(flow_lines))
 
-    movers = "*Top movers*"
+    gainers = "*Top Gainers*"
     for m in b.movers.gainers[:3]:
-        movers += f"\n{trend_emoji(m.change_pct)} `{m.symbol}` {signed_pct(m.change_pct, places=1)}{vol_ratio(m.volume_ratio)}"
+        gainers += f"\n{trend_emoji(m.change_pct)} `{m.symbol}` {signed_pct(m.change_pct, places=1)}"
+    sections.append(gainers)
+
+    losers = "*Top Losers*"
     for m in b.movers.losers[:3]:
-        movers += f"\n{trend_emoji(m.change_pct)} `{m.symbol}` {signed_pct(m.change_pct, places=1)}{vol_ratio(m.volume_ratio)}"
-    sections.append(movers)
+        losers += f"\n{trend_emoji(m.change_pct)} `{m.symbol}` {signed_pct(m.change_pct, places=1)}"
+    sections.append(losers)
 
     mq = b.macro
-    gold_inr_10g = gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
+    gold_inr_10g = mq.gold_inr_per_10g or gold_inr_per_10g(mq.gold.last, mq.usdinr.last)
     sections.append(
         "*Macro*\n"
         f"• USDINR {fmt_num(mq.usdinr.last)} ({signed_pct(mq.usdinr.change_pct)})\n"

@@ -188,10 +188,20 @@ def test_linkedin_length_within_band(briefing):
     assert 500 <= len(text) <= 1200, f"unexpected length {len(text)}"
 
 
-def test_linkedin_volume_ratios_rendered(briefing):
+def test_linkedin_movers_have_no_volume(briefing):
+    """Volume ratio (e.g. '14.6x') should be removed from movers display."""
     text = format_linkedin(briefing)
-    assert "(14.6x)" in text
-    assert "CEMPRO" in text
+    assert "x)" not in text
+    assert "avg vol" not in text
+
+
+def test_linkedin_movers_split_into_gainers_losers(briefing):
+    text = format_linkedin(briefing)
+    assert "Top Gainers" in text
+    assert "Top Losers" in text
+    assert "Top movers" not in text
+    # Gainers come before losers
+    assert text.find("Top Gainers") < text.find("Top Losers")
 
 
 def test_linkedin_drops_ipo_section(briefing):
@@ -222,10 +232,21 @@ def test_linkedin_shows_india_gsec_not_us(briefing):
     assert "US 10Y" not in text
 
 
-def test_linkedin_shows_gold_in_inr_per_10g(briefing):
+def test_linkedin_falls_back_to_computed_gold_inr_when_ibja_unavailable(briefing):
+    """gold_inr_per_10g is None in fixture → format_linkedin computes from
+    USD × USDINR (Gold $4644.50 × 94.88 / 31.1035 × 10 ≈ ₹141,679)."""
     text = format_linkedin(briefing)
-    # Gold $4644.50 × USDINR 94.88 / 31.1035 × 10 ≈ ₹141,679/10g
     assert "₹141,679/10g" in text
+
+
+def test_linkedin_prefers_ibja_gold_when_available(briefing):
+    """If IBJA's official rate is fetched, use that instead of computing from USD."""
+    enriched = briefing.model_copy(update={
+        "macro": briefing.macro.model_copy(update={"gold_inr_per_10g": 148100.0})
+    })
+    text = format_linkedin(enriched)
+    assert "₹148,100/10g" in text
+    assert "₹141,679/10g" not in text
 
 
 def test_linkedin_section_separation_uses_double_blank(briefing):
