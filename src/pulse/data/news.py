@@ -42,8 +42,8 @@ _NEWS_HEADERS = {
 
 SOURCES: dict[str, str] = {
     "Business Standard": "https://www.business-standard.com/rss/latest.rss",
-    "Economic Times": "https://economictimes.indiatimes.com/rssfeedstopstories.cms",
-    "Mint": "https://www.livemint.com/rss/markets",
+    "Economic Times": "https://b2b.economictimes.indiatimes.com/rss/recentstories",
+    "Mint": "https://www.livemint.com/rss/companies",
 }
 
 # Order matters for dedup: when two sources cover the same story, the
