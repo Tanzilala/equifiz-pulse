@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..models import PulseBriefing
-from .common import crore, crore_unsigned, fmt_num, gold_inr_per_10g, signed_pct, to_ist
+from .common import crore_net, crore_unsigned, fmt_num, gold_inr_per_10g, signed_pct, to_ist
 
 
 def format_whatsapp(b: PulseBriefing) -> str:
@@ -20,8 +20,8 @@ def format_whatsapp(b: PulseBriefing) -> str:
     cash = b.flows.cash
     sections.append(
         f"FLOWS (Rs cr · {cash.date.strftime('%d %b')})\n"
-        f"FII  buy {crore_unsigned(cash.fii_buy)} | sell {crore_unsigned(cash.fii_sell)} | net {crore(cash.fii_net)}\n"
-        f"DII  buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)} | net {crore(cash.dii_net)}"
+        f"FII  buy {crore_unsigned(cash.fii_buy)} | sell {crore_unsigned(cash.fii_sell)} | net {crore_net(cash.fii_buy, cash.fii_sell)}\n"
+        f"DII  buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)} | net {crore_net(cash.dii_buy, cash.dii_sell)}"
     )
 
     gainers_lines = "\n".join(

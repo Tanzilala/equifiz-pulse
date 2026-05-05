@@ -213,10 +213,31 @@ def test_linkedin_drops_ipo_section(briefing):
 
 def test_linkedin_shows_full_fii_dii(briefing):
     text = format_linkedin(briefing)
-    # FII fixture: buy=15049.55  sell=23097.41  net=-8047.86
+    # FII fixture: buy=15049.55  sell=23097.41 → rounded 15,050 - 23,097 = -8,047
     assert "buy 15,050" in text
     assert "sell 23,097" in text
-    assert "net -8,048" in text
+    assert "net -8,047" in text  # consistent with displayed buy − sell
+
+
+def test_linkedin_net_is_unsigned_when_positive(briefing):
+    """Positive net values should not have a '+' prefix."""
+    # DII fixture: buy=18252.89  sell=14765.79 → net = 18,253 - 14,766 = 3,487
+    text = format_linkedin(briefing)
+    assert "net 3,487" in text  # no '+' prefix
+    assert "net +" not in text  # no positive net should have a plus
+
+
+def test_linkedin_net_matches_displayed_buy_minus_sell(briefing):
+    """Displayed net should always reconcile with displayed buy − sell."""
+    text = format_linkedin(briefing)
+    # Both rows: extract numbers and verify
+    import re
+    m = re.search(r'FII\s+buy ([\d,]+)\s+sell ([\d,]+)\s+net (-?[\d,]+)', text)
+    assert m, f"FII line not found in: {text}"
+    buy = int(m.group(1).replace(',', ''))
+    sell = int(m.group(2).replace(',', ''))
+    net = int(m.group(3).replace(',', ''))
+    assert buy - sell == net
 
 
 def test_linkedin_shows_dollar_index(briefing):

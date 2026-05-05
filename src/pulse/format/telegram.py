@@ -4,6 +4,7 @@ from __future__ import annotations
 from ..models import PulseBriefing
 from .common import (
     crore,
+    crore_net,
     crore_unsigned,
     fmt_num,
     gold_inr_per_10g,
@@ -38,8 +39,8 @@ def format_telegram(b: PulseBriefing) -> str:
     cash = b.flows.cash
     flow_lines = [
         f"*Flows (₹ cr · {cash.date.strftime('%d %b')})*",
-        f"• FII   buy `{crore_unsigned(cash.fii_buy)}`   sell `{crore_unsigned(cash.fii_sell)}`   net `{crore(cash.fii_net)}`",
-        f"• DII   buy `{crore_unsigned(cash.dii_buy)}`   sell `{crore_unsigned(cash.dii_sell)}`   net `{crore(cash.dii_net)}`",
+        f"• FII   buy `{crore_unsigned(cash.fii_buy)}`   sell `{crore_unsigned(cash.fii_sell)}`   net `{crore_net(cash.fii_buy, cash.fii_sell)}`",
+        f"• DII   buy `{crore_unsigned(cash.dii_buy)}`   sell `{crore_unsigned(cash.dii_sell)}`   net `{crore_net(cash.dii_buy, cash.dii_sell)}`",
     ]
     if b.flows.fno and b.flows.fno.index_futures_net is not None:
         flow_lines.append(f"• FII Idx Fut net: `{crore(b.flows.fno.index_futures_net)}`")
