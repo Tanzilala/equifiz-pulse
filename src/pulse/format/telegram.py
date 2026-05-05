@@ -39,8 +39,10 @@ def format_telegram(b: PulseBriefing) -> str:
     cash = b.flows.cash
     flow_lines = [
         f"*Flows (₹ cr · {cash.date.strftime('%d %b')})*",
-        f"• FII   buy `{crore_unsigned(cash.fii_buy)}`   sell `{crore_unsigned(cash.fii_sell)}`   net `{crore_net(cash.fii_buy, cash.fii_sell)}`",
-        f"• DII   buy `{crore_unsigned(cash.dii_buy)}`   sell `{crore_unsigned(cash.dii_sell)}`   net `{crore_net(cash.dii_buy, cash.dii_sell)}`",
+        f"• FII   buy `{crore_unsigned(cash.fii_buy)}`   sell `{crore_unsigned(cash.fii_sell)}`",
+        f"     net `{crore_net(cash.fii_buy, cash.fii_sell)}`",
+        f"• DII   buy `{crore_unsigned(cash.dii_buy)}`   sell `{crore_unsigned(cash.dii_sell)}`",
+        f"     net `{crore_net(cash.dii_buy, cash.dii_sell)}`",
     ]
     if b.flows.fno and b.flows.fno.index_futures_net is not None:
         flow_lines.append(f"• FII Idx Fut net: `{crore(b.flows.fno.index_futures_net)}`")

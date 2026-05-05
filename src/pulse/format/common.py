@@ -62,10 +62,10 @@ def crore_unsigned(v: float) -> str:
 
 def crore_net(buy: float, sell: float) -> str:
     """Net = displayed_buy − displayed_sell so the row always reconciles.
-    No '+' prefix on positives; '-' prefix on negatives.
+    Always signed (+ for positive, − for negative).
     """
     net_int = round(buy) - round(sell)
-    return f"{net_int:,}"
+    return f"{net_int:+,}"
 
 
 # 1 troy ounce = 31.1034768 grams. Indian gold market quotes ₹/10g.

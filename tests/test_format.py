@@ -219,24 +219,31 @@ def test_linkedin_shows_full_fii_dii(briefing):
     assert "net -8,047" in text  # consistent with displayed buy − sell
 
 
-def test_linkedin_net_is_unsigned_when_positive(briefing):
-    """Positive net values should not have a '+' prefix."""
-    # DII fixture: buy=18252.89  sell=14765.79 → net = 18,253 - 14,766 = 3,487
+def test_linkedin_net_is_signed(briefing):
+    """Net values keep both + (positive) and − (negative) signs for clarity."""
     text = format_linkedin(briefing)
-    assert "net 3,487" in text  # no '+' prefix
-    assert "net +" not in text  # no positive net should have a plus
+    # DII fixture is positive; FII fixture is negative
+    assert "net +3,487" in text  # DII +ve has '+' prefix
+    assert "net -8,047" in text  # FII -ve has '-' prefix
+
+
+def test_linkedin_net_on_separate_indented_line(briefing):
+    """Net appears on its own line, indented under the FII/DII row."""
+    text = format_linkedin(briefing)
+    # Buy/sell on one line; net on the following line
+    assert "buy 15,050   sell 23,097\n     net -8,047" in text
+    assert "buy 18,253   sell 14,766\n     net +3,487" in text
 
 
 def test_linkedin_net_matches_displayed_buy_minus_sell(briefing):
     """Displayed net should always reconcile with displayed buy − sell."""
     text = format_linkedin(briefing)
-    # Both rows: extract numbers and verify
     import re
-    m = re.search(r'FII\s+buy ([\d,]+)\s+sell ([\d,]+)\s+net (-?[\d,]+)', text)
-    assert m, f"FII line not found in: {text}"
+    m = re.search(r'FII\s+buy ([\d,]+)\s+sell ([\d,]+).*?net ([+-][\d,]+)', text, re.DOTALL)
+    assert m, f"FII row not parseable from: {text}"
     buy = int(m.group(1).replace(',', ''))
     sell = int(m.group(2).replace(',', ''))
-    net = int(m.group(3).replace(',', ''))
+    net = int(m.group(3).replace(',', '').replace('+', ''))
     assert buy - sell == net
 
 

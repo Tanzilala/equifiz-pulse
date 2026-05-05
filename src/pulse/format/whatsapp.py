@@ -20,8 +20,10 @@ def format_whatsapp(b: PulseBriefing) -> str:
     cash = b.flows.cash
     sections.append(
         f"FLOWS (Rs cr · {cash.date.strftime('%d %b')})\n"
-        f"FII  buy {crore_unsigned(cash.fii_buy)} | sell {crore_unsigned(cash.fii_sell)} | net {crore_net(cash.fii_buy, cash.fii_sell)}\n"
-        f"DII  buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)} | net {crore_net(cash.dii_buy, cash.dii_sell)}"
+        f"FII  buy {crore_unsigned(cash.fii_buy)} | sell {crore_unsigned(cash.fii_sell)}\n"
+        f"     net {crore_net(cash.fii_buy, cash.fii_sell)}\n"
+        f"DII  buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)}\n"
+        f"     net {crore_net(cash.dii_buy, cash.dii_sell)}"
     )
 
     gainers_lines = "\n".join(
