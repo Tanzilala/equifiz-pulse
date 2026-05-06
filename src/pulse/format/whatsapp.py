@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 from ..models import PulseBriefing
-from .common import crore_net, crore_unsigned, fmt_num, gold_inr_per_10g, signed_pct, to_ist
+from .common import crore_net, crore_unsigned, fmt_num, gold_inr_per_10g, signed_pct, signed_pts, to_ist
+
+
+def _idx_line(name: str, q) -> str:
+    return f"{name} {fmt_num(q.last)}  {signed_pts(q.change)} ({signed_pct(q.change_pct)})"
 
 
 def format_whatsapp(b: PulseBriefing) -> str:
@@ -11,19 +15,24 @@ def format_whatsapp(b: PulseBriefing) -> str:
 
     sections.append(
         "INDICES\n"
-        f"Sensex: {fmt_num(b.indices.sensex.last)} ({signed_pct(b.indices.sensex.change_pct)})\n"
-        f"Nifty 50: {fmt_num(b.indices.nifty_50.last)} ({signed_pct(b.indices.nifty_50.change_pct)})\n"
-        f"Bank Nifty: {fmt_num(b.indices.bank_nifty.last)} ({signed_pct(b.indices.bank_nifty.change_pct)})\n"
-        f"VIX: {fmt_num(b.indices.india_vix.last)} ({signed_pct(b.indices.india_vix.change_pct)})"
+        + "\n".join(
+            _idx_line(name, q)
+            for name, q in (
+                ("Sensex", b.indices.sensex),
+                ("Nifty 50", b.indices.nifty_50),
+                ("Bank Nifty", b.indices.bank_nifty),
+                ("VIX", b.indices.india_vix),
+            )
+        )
     )
 
     cash = b.flows.cash
     sections.append(
-        f"FLOWS (Rs cr · {cash.date.strftime('%d %b')})\n"
-        f"FII  buy {crore_unsigned(cash.fii_buy)} | sell {crore_unsigned(cash.fii_sell)}\n"
-        f"     net {crore_net(cash.fii_buy, cash.fii_sell)}\n"
-        f"DII  buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)}\n"
-        f"     net {crore_net(cash.dii_buy, cash.dii_sell)}"
+        f"FLOWS (Rs cr · {cash.date.strftime('%d %b')})\n\n"
+        f"FII  {crore_net(cash.fii_buy, cash.fii_sell)}\n"
+        f"   buy {crore_unsigned(cash.fii_buy)} | sell {crore_unsigned(cash.fii_sell)}\n\n"
+        f"DII  {crore_net(cash.dii_buy, cash.dii_sell)}\n"
+        f"   buy {crore_unsigned(cash.dii_buy)} | sell {crore_unsigned(cash.dii_sell)}"
     )
 
     gainers_lines = "\n".join(

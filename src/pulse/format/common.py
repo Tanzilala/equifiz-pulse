@@ -50,6 +50,11 @@ def signed_num(v: float, places: int = 2) -> str:
     return f"{v:+,.{places}f}"
 
 
+def signed_pts(v: float, places: int = 2) -> str:
+    """Format an absolute change-in-points figure with sign and 2dp."""
+    return f"{v:+,.{places}f}"
+
+
 def crore(v: float) -> str:
     """Format a ₹ crore figure: rounds to integer, comma-separated, signed."""
     return f"{v:+,.0f}"

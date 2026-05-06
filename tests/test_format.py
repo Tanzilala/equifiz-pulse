@@ -175,7 +175,7 @@ def test_linkedin_indices_in_correct_order(briefing):
 
 def test_linkedin_includes_sensex(briefing):
     text = format_linkedin(briefing)
-    assert "Sensex: 81,234.50" in text
+    assert "Sensex 81,234.50" in text
 
 
 def test_linkedin_no_midcap(briefing):
@@ -216,35 +216,41 @@ def test_linkedin_shows_full_fii_dii(briefing):
     # FII fixture: buy=15049.55  sell=23097.41 → rounded 15,050 - 23,097 = -8,047
     assert "buy 15,050" in text
     assert "sell 23,097" in text
-    assert "net -8,047" in text  # consistent with displayed buy − sell
+    assert "-8,047" in text  # net consistent with displayed buy − sell
 
 
 def test_linkedin_net_is_signed(briefing):
-    """Net values keep both + (positive) and − (negative) signs for clarity."""
+    """Net keeps both + (positive) and − (negative) signs for clarity."""
     text = format_linkedin(briefing)
-    # DII fixture is positive; FII fixture is negative
-    assert "net +3,487" in text  # DII +ve has '+' prefix
-    assert "net -8,047" in text  # FII -ve has '-' prefix
+    assert "+3,487" in text  # DII positive net
+    assert "-8,047" in text  # FII negative net
 
 
-def test_linkedin_net_on_separate_indented_line(briefing):
-    """Net appears on its own line, indented under the FII/DII row."""
+def test_linkedin_flow_block_format(briefing):
+    """Flows: institution + emoji + bold net on first line, buy/sell indented below."""
     text = format_linkedin(briefing)
-    # Buy/sell on one line; net on the following line
-    assert "buy 15,050   sell 23,097\n     net -8,047" in text
-    assert "buy 18,253   sell 14,766\n     net +3,487" in text
+    # FII block: red emoji + signed net, then indented buy/sell
+    assert "FII 🔴 -8,047\n   buy 15,050 · sell 23,097" in text
+    # DII block: green emoji + signed net, then indented buy/sell
+    assert "DII 🟢 +3,487\n   buy 18,253 · sell 14,766" in text
 
 
-def test_linkedin_net_matches_displayed_buy_minus_sell(briefing):
-    """Displayed net should always reconcile with displayed buy − sell."""
+def test_linkedin_indices_show_point_change(briefing):
+    """Each index line shows absolute point change alongside %."""
     text = format_linkedin(briefing)
-    import re
-    m = re.search(r'FII\s+buy ([\d,]+)\s+sell ([\d,]+).*?net ([+-][\d,]+)', text, re.DOTALL)
-    assert m, f"FII row not parseable from: {text}"
-    buy = int(m.group(1).replace(',', ''))
-    sell = int(m.group(2).replace(',', ''))
-    net = int(m.group(3).replace(',', '').replace('+', ''))
-    assert buy - sell == net
+    # Nifty 50: 23997.55 - 24177.65 = -180.10
+    assert "Nifty 50 23,997.55" in text
+    assert "-180.10" in text
+    assert "(-0.74%)" in text
+
+
+def test_linkedin_indices_use_color_emoji(briefing):
+    """Indices show color emoji (🟢/🔴) before the change."""
+    text = format_linkedin(briefing)
+    # Nifty 50 fell -0.74% → 🔴
+    assert "🔴 -180.10" in text
+    # India VIX rose +5.86% → 🟢
+    assert "🟢 +1.02" in text
 
 
 def test_linkedin_shows_dollar_index(briefing):
@@ -346,7 +352,7 @@ def test_whatsapp_no_commentary(briefing):
 
 def test_whatsapp_includes_sensex(briefing):
     text = format_whatsapp(briefing)
-    assert "Sensex: 81,234.50" in text
+    assert "Sensex 81,234.50" in text
 
 
 def test_whatsapp_shorter_than_others(briefing):

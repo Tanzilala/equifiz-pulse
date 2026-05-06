@@ -3,24 +3,34 @@ from __future__ import annotations
 
 from ..models import PulseBriefing
 from .common import (
-    crore,
     crore_net,
     crore_unsigned,
     fmt_num,
     gold_inr_per_10g,
     signed_pct,
+    signed_pts,
     to_ist,
     trend_emoji,
 )
 
 
 def _idx_line(name: str, q) -> str:
-    return f"• {name}: {fmt_num(q.last)} ({signed_pct(q.change_pct)})"
+    em = trend_emoji(q.change_pct)
+    return f"• {name} {fmt_num(q.last)}  {em} {signed_pts(q.change)} ({signed_pct(q.change_pct)})"
 
 
 def _mover_line(m) -> str:
     name = m.symbol if len(m.symbol) <= 12 else m.symbol[:11] + "…"
     return f"{trend_emoji(m.change_pct)} {name} {signed_pct(m.change_pct, places=1)}"
+
+
+def _flow_block(label: str, buy: float, sell: float) -> str:
+    net_int = round(buy) - round(sell)
+    em = trend_emoji(float(net_int))
+    return (
+        f"{label} {em} {crore_net(buy, sell)}\n"
+        f"   buy {crore_unsigned(buy)} · sell {crore_unsigned(sell)}"
+    )
 
 
 def format_linkedin(b: PulseBriefing) -> str:
@@ -41,16 +51,15 @@ def format_linkedin(b: PulseBriefing) -> str:
     )
 
     cash = b.flows.cash
-    flow_lines = [
-        f"Flows (₹ cr · {cash.date.strftime('%d %b')})",
-        f"• FII   buy {crore_unsigned(cash.fii_buy)}   sell {crore_unsigned(cash.fii_sell)}",
-        f"     net {crore_net(cash.fii_buy, cash.fii_sell)}",
-        f"• DII   buy {crore_unsigned(cash.dii_buy)}   sell {crore_unsigned(cash.dii_sell)}",
-        f"     net {crore_net(cash.dii_buy, cash.dii_sell)}",
-    ]
+    flow_section = (
+        f"Flows (₹ cr · {cash.date.strftime('%d %b')})\n\n"
+        f"{_flow_block('FII', cash.fii_buy, cash.fii_sell)}\n\n"
+        f"{_flow_block('DII', cash.dii_buy, cash.dii_sell)}"
+    )
     if b.flows.fno and b.flows.fno.index_futures_net is not None:
-        flow_lines.append(f"• FII Index Futures net: {crore(b.flows.fno.index_futures_net)}")
-    sections.append("\n".join(flow_lines))
+        fno_em = trend_emoji(b.flows.fno.index_futures_net)
+        flow_section += f"\n\nFII Index Futures {fno_em} {round(b.flows.fno.index_futures_net):+,}"
+    sections.append(flow_section)
 
     gainers_block = "Top Gainers (Nifty 500)"
     for m in b.movers.gainers[:3]:

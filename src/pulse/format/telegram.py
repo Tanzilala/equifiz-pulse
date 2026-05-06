@@ -3,20 +3,29 @@ from __future__ import annotations
 
 from ..models import PulseBriefing
 from .common import (
-    crore,
     crore_net,
     crore_unsigned,
     fmt_num,
     gold_inr_per_10g,
     signed_pct,
+    signed_pts,
     to_ist,
     trend_emoji,
 )
 
 
-def _idx_md(name: str, q) -> str:
+def _idx_line(name: str, q) -> str:
     em = trend_emoji(q.change_pct)
-    return f"• {name}: `{fmt_num(q.last)}` {em} {signed_pct(q.change_pct)}"
+    return f"• {name} {fmt_num(q.last)}  {em} {signed_pts(q.change)} ({signed_pct(q.change_pct)})"
+
+
+def _flow_block(label: str, buy: float, sell: float) -> str:
+    net_int = round(buy) - round(sell)
+    em = trend_emoji(float(net_int))
+    return (
+        f"*{label}* {em} *{crore_net(buy, sell)}*\n"
+        f"   buy {crore_unsigned(buy)} · sell {crore_unsigned(sell)}"
+    )
 
 
 def format_telegram(b: PulseBriefing) -> str:
@@ -26,7 +35,7 @@ def format_telegram(b: PulseBriefing) -> str:
     sections.append(
         "*Indices*\n"
         + "\n".join(
-            _idx_md(name, q)
+            _idx_line(name, q)
             for name, q in (
                 ("Sensex", b.indices.sensex),
                 ("Nifty 50", b.indices.nifty_50),
@@ -37,16 +46,15 @@ def format_telegram(b: PulseBriefing) -> str:
     )
 
     cash = b.flows.cash
-    flow_lines = [
-        f"*Flows (₹ cr · {cash.date.strftime('%d %b')})*",
-        f"• FII   buy `{crore_unsigned(cash.fii_buy)}`   sell `{crore_unsigned(cash.fii_sell)}`",
-        f"     net `{crore_net(cash.fii_buy, cash.fii_sell)}`",
-        f"• DII   buy `{crore_unsigned(cash.dii_buy)}`   sell `{crore_unsigned(cash.dii_sell)}`",
-        f"     net `{crore_net(cash.dii_buy, cash.dii_sell)}`",
-    ]
+    flow_section = (
+        f"*Flows (₹ cr · {cash.date.strftime('%d %b')})*\n\n"
+        f"{_flow_block('FII', cash.fii_buy, cash.fii_sell)}\n\n"
+        f"{_flow_block('DII', cash.dii_buy, cash.dii_sell)}"
+    )
     if b.flows.fno and b.flows.fno.index_futures_net is not None:
-        flow_lines.append(f"• FII Idx Fut net: `{crore(b.flows.fno.index_futures_net)}`")
-    sections.append("\n".join(flow_lines))
+        fno_em = trend_emoji(b.flows.fno.index_futures_net)
+        flow_section += f"\n\n*FII Idx Fut* {fno_em} *{round(b.flows.fno.index_futures_net):+,}*"
+    sections.append(flow_section)
 
     gainers = "*Top Gainers*"
     for m in b.movers.gainers[:3]:
