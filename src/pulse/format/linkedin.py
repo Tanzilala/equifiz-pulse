@@ -14,9 +14,12 @@ from .common import (
 )
 
 
-def _idx_line(name: str, q) -> str:
+def _idx_block(name: str, q) -> str:
     em = trend_emoji(q.change_pct)
-    return f"• {name} {fmt_num(q.last)}  {em} {signed_pts(q.change)} ({signed_pct(q.change_pct)})"
+    return (
+        f"{name} {fmt_num(q.last)}\n"
+        f"{em} {signed_pts(q.change)} ({signed_pct(q.change_pct)})"
+    )
 
 
 def _mover_line(m) -> str:
@@ -38,9 +41,9 @@ def format_linkedin(b: PulseBriefing) -> str:
     sections: list[str] = [f"Equifiz Pulse · {date_str}"]
 
     sections.append(
-        "Indices (prev close)\n"
-        + "\n".join(
-            _idx_line(name, q)
+        "Indices (prev close)\n\n"
+        + "\n\n".join(
+            _idx_block(name, q)
             for name, q in (
                 ("Sensex", b.indices.sensex),
                 ("Nifty 50", b.indices.nifty_50),

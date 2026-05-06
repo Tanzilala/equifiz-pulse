@@ -5,8 +5,11 @@ from ..models import PulseBriefing
 from .common import crore_net, crore_unsigned, fmt_num, gold_inr_per_10g, signed_pct, signed_pts, to_ist
 
 
-def _idx_line(name: str, q) -> str:
-    return f"{name} {fmt_num(q.last)}  {signed_pts(q.change)} ({signed_pct(q.change_pct)})"
+def _idx_block(name: str, q) -> str:
+    return (
+        f"{name} {fmt_num(q.last)}\n"
+        f"{signed_pts(q.change)} ({signed_pct(q.change_pct)})"
+    )
 
 
 def format_whatsapp(b: PulseBriefing) -> str:
@@ -14,9 +17,9 @@ def format_whatsapp(b: PulseBriefing) -> str:
     sections: list[str] = [f"EQUIFIZ PULSE · {date_str}"]
 
     sections.append(
-        "INDICES\n"
-        + "\n".join(
-            _idx_line(name, q)
+        "INDICES\n\n"
+        + "\n\n".join(
+            _idx_block(name, q)
             for name, q in (
                 ("Sensex", b.indices.sensex),
                 ("Nifty 50", b.indices.nifty_50),
