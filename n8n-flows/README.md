@@ -5,8 +5,8 @@ One workflow per channel. Each takes the JSON envelope from `pulse run` and forw
 | File | Status |
 |---|---|
 | [telegram.json](telegram.json) | Ready |
-| `linkedin.json` | TODO (Step 5 wiring) |
-| `whatsapp.json` | TODO (Step 5 wiring) |
+| [linkedin.json](linkedin.json) | Ready (needs LinkedIn OAuth credential + Person URN) |
+| `whatsapp.json` | TODO |
 
 ## Telegram setup (10 minutes)
 
@@ -92,3 +92,45 @@ The current flow uses `{{ $json.body.text }}` to grab the message. If you need t
 - **`Bad Request: chat not found`** — chat_id is wrong, or the bot isn't a member/admin.
 - **Markdown parse errors** — pulse output uses Telegram **Markdown V1**. If you switch the node to MarkdownV2, you'll need to escape `_*[]()~``>#+-=|{}.!`.
 - **Bot token leak** — the token alone gives full bot control. Keep it in n8n credentials, never in the flow JSON.
+
+---
+
+## LinkedIn setup (~5 min if you already have a LinkedIn credential in n8n)
+
+The LinkedIn brief uses `format_linkedin()` — plain text, no markdown markup, posts cleanly as a regular LinkedIn update.
+
+### 1. Get your Person URN (one-time)
+
+LinkedIn requires the URN of the entity making the post. For a personal profile:
+
+1. Go to your LinkedIn profile page
+2. Look at the URL: `https://www.linkedin.com/in/your-handle/`
+3. Open dev tools → Network tab → reload → look at the `voyager` API responses for `urn:li:fsd_profile:XXXXXXXXX` — the trailing ID is your Person URN
+4. Alternatively, in n8n with LinkedIn credential set up: create a temporary "Get profile" node → run once → copy the `id` field
+
+The URN looks like: `urn:li:person:abc123xyz`
+
+(For posting as a company page instead of personal: use `organization` URN — see n8n LinkedIn docs.)
+
+### 2. Import the workflow
+
+In n8n:
+- **+ Add workflow** → top-right `⋮` → **Import from File** → select `linkedin.json`
+- Two nodes appear: Webhook trigger and `Send to LinkedIn`
+
+### 3. Configure credential + URN
+
+Click the **Send to LinkedIn** node:
+- **Credential** — select your existing LinkedIn OAuth credential (or create one if you haven't)
+- **Person** field — replace `REPLACE_WITH_YOUR_PERSON_URN` with the URN from step 1
+- (Other fields like `text`, `resource`, `operation` are pre-set — leave as-is)
+
+### 4. Activate, copy URL, paste back
+
+- Toggle the workflow **Active** (top-right)
+- Click the **Webhook (pulse)** node → copy the **Production URL** (ends in `/webhook/equifiz-pulse-linkedin`)
+- Drop into VPS `/opt/equifiz-pulse/.env`:
+  ```
+  N8N_LINKEDIN_WEBHOOK=<that URL>
+  ```
+- Update crontab to add `linkedin` after `telegram` in the markets cron lines (see main repo README)
