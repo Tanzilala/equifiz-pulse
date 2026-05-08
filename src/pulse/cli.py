@@ -125,12 +125,17 @@ def _marker_path(ist_today: "date") -> Path:
     return Path("logs") / "markers" / f"posted-{ist_today.isoformat()}.marker"
 
 
+VALID_CHANNELS = ("linkedin", "telegram", "whatsapp")
+
+
 @main.command()
 @click.option(
     "--only",
-    type=click.Choice(["linkedin", "telegram", "whatsapp"], case_sensitive=False),
     default=None,
-    help="Send to a single channel.",
+    help=(
+        "Channel(s) to send to. Comma-separated for multiple, e.g. "
+        "'telegram,linkedin'. Default: all three configured channels."
+    ),
 )
 @click.option(
     "--confirm",
@@ -153,7 +158,18 @@ def run(only: str | None, confirm: bool, skip_if_stale: bool, once_per_day: bool
     logger = RunLogger()
     started_at = datetime.now(timezone.utc)
 
-    channels = [only.lower()] if only else ["linkedin", "telegram", "whatsapp"]
+    if only:
+        requested = [c.strip().lower() for c in only.split(",") if c.strip()]
+        invalid = [c for c in requested if c not in VALID_CHANNELS]
+        if invalid:
+            console.print(
+                f"[red]Invalid channel(s):[/] {invalid}. "
+                f"Valid: {', '.join(VALID_CHANNELS)}"
+            )
+            raise SystemExit(2)
+        channels = requested
+    else:
+        channels = list(VALID_CHANNELS)
 
     missing: list[str] = []
     webhooks: dict[str, str] = {}
