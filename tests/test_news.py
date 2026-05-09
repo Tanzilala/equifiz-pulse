@@ -111,6 +111,9 @@ def test_is_clickbait_catches_listicles():
     assert is_clickbait("Assembly elections 2026: A tale of three voter turnouts")
     assert is_clickbait("CSK vs MI: who's winning today")
     assert is_clickbait("Sir Alex Ferguson rushed to hospital before MUN vs LIV")
+    # The bug we just fixed — `%` at end of token isn't followed by a word boundary
+    assert is_clickbait("Vijay Kedia Portfolio Check: 10 stocks surge up to 44% — plus 5 fresh picks")
+    assert is_clickbait("Concurrent Gainers: 14 stocks gain for 5 straight sessions, rally up to 25%")
 
 
 def test_is_clickbait_passes_real_news():

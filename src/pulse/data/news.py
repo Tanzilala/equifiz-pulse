@@ -41,8 +41,8 @@ _NEWS_HEADERS = {
 }
 
 SOURCES: dict[str, str] = {
-    "Business Standard": "https://www.business-standard.com/rss/latest.rss",
-    "Economic Times": "https://b2b.economictimes.indiatimes.com/rss/recentstories",
+    "Business Standard": "https://www.business-standard.com/rss/companies-101.rss",
+    "Economic Times": "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
     "Mint": "https://www.livemint.com/rss/companies",
 }
 
@@ -67,8 +67,12 @@ _CLICKBAIT_PATTERNS = [
         r"\bcheck (?:the )?list\b",
         r"\b\d+ (?:penny|largecap|smallcap|midcap|multibagger) stocks?\b",
         r"\bshould you (?:buy|sell|invest|hold)\b",
-        r"\b(?:rally|surged?|soared?|jumped?|gained?) up to \d+%\b",
+        # "X up/down N%" — drop trailing \b (\b after % never matches because %/space are both non-word).
+        r"\b(?:rally|surged?|soared?|jumped?|gained?|cracked?|tanked?|spiked?) up to \d+%",
+        r"\b\d+ stocks? (?:rally|surge|jump|soar|gain|crack|tank) up to \d+%",
         r"\bstocks? rally up to\b",
+        r"\bportfolio check\b",
+        r"\bconcurrent gainers?\b",
         # "₹1 lakh became ₹1 crore" promo headlines
         r"\bmultibagger\s+(?:penny\s+)?stocks?\b",
         r"\bturns? .{0,3}₹[\d,.]+\s+(?:lakh|crore)\s+into\b",
