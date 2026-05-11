@@ -185,7 +185,7 @@ def test_linkedin_no_midcap(briefing):
 
 def test_linkedin_length_within_band(briefing):
     text = format_linkedin(briefing)
-    assert 400 <= len(text) <= 800, f"unexpected length {len(text)}"
+    assert 500 <= len(text) <= 900, f"unexpected length {len(text)}"
 
 
 def test_linkedin_drops_prev_close_label(briefing):
@@ -234,11 +234,27 @@ def test_linkedin_net_is_signed(briefing):
 
 
 def test_linkedin_flow_block_format(briefing):
-    """Flows: single line per side — emoji + institution + net + buy/sell inline."""
+    """Flows: single line per side — emoji + institution + net (buy · sell)."""
     text = format_linkedin(briefing)
-    # FII: red emoji, signed net, buy/sell on the same line
-    assert "🔴 FII -8,047  ·  buy 15,050 · sell 23,097" in text
-    assert "🟢 DII +3,487  ·  buy 18,253 · sell 14,766" in text
+    assert "🔴 FII -8,047 (buy 15,050 · sell 23,097)" in text
+    assert "🟢 DII +3,487 (buy 18,253 · sell 14,766)" in text
+
+
+def test_linkedin_has_emoji_section_headers(briefing):
+    """Sections lead with thematic emojis (📊 💸 🚀 🌐)."""
+    text = format_linkedin(briefing)
+    assert "📊 Indices" in text
+    assert "💸 Flows" in text
+    assert "🚀 Top Movers" in text
+    assert "🌐 Macro" in text
+
+
+def test_linkedin_ends_with_hashtags(briefing):
+    """Hashtag footer for LinkedIn reach."""
+    text = format_linkedin(briefing)
+    assert text.rstrip().endswith("#Equifiz")
+    for tag in ("#IndianStockMarket", "#NSE", "#BSE", "#Nifty", "#Sensex"):
+        assert tag in text
 
 
 def test_linkedin_indices_show_point_change(briefing):
@@ -246,7 +262,7 @@ def test_linkedin_indices_show_point_change(briefing):
     text = format_linkedin(briefing)
     assert "Nifty 50 23,997.55" in text
     assert "-180.10" in text
-    assert "(-0.74%)" in text
+    assert "-0.74%" in text
 
 
 def test_linkedin_indices_use_color_emoji(briefing):
@@ -264,9 +280,18 @@ def test_linkedin_shows_dollar_index(briefing):
     assert "98.31" in text
 
 
+def test_linkedin_indices_use_single_paren_change(briefing):
+    """Indices show change as `(±points, ±pct%)` in a single paren — LinkedIn-native."""
+    text = format_linkedin(briefing)
+    # Nifty 50 fixture: change=-180.10, change_pct=-0.74
+    assert "(-180.10, -0.74%)" in text
+    # India VIX fixture: change=+1.02, change_pct=+5.86
+    assert "(+1.02, +5.86%)" in text
+
+
 def test_linkedin_shows_india_gsec_not_us(briefing):
     text = format_linkedin(briefing)
-    assert "India G-Sec 10Y" in text
+    assert "India 10Y G-Sec" in text
     assert "7.02" in text
     assert "US 10Y" not in text
 
