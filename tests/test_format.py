@@ -185,7 +185,13 @@ def test_linkedin_no_midcap(briefing):
 
 def test_linkedin_length_within_band(briefing):
     text = format_linkedin(briefing)
-    assert 500 <= len(text) <= 1200, f"unexpected length {len(text)}"
+    assert 400 <= len(text) <= 800, f"unexpected length {len(text)}"
+
+
+def test_linkedin_drops_prev_close_label(briefing):
+    """Header is plain 'Indices' — '(prev close)' was redundant with the date."""
+    text = format_linkedin(briefing)
+    assert "(prev close)" not in text
 
 
 def test_linkedin_movers_have_no_volume(briefing):
@@ -195,13 +201,14 @@ def test_linkedin_movers_have_no_volume(briefing):
     assert "avg vol" not in text
 
 
-def test_linkedin_movers_split_into_gainers_losers(briefing):
+def test_linkedin_movers_inline_format(briefing):
+    """Gainers and losers each share one line, separated by '·'."""
     text = format_linkedin(briefing)
-    assert "Top Gainers" in text
-    assert "Top Losers" in text
-    assert "Top movers" not in text
-    # Gainers come before losers
-    assert text.find("Top Gainers") < text.find("Top Losers")
+    assert "Top Movers (Nifty 500)" in text
+    # Gainers line: '🟢 SYM +X% · SYM +X% · SYM +X%'
+    assert " · " in text
+    assert "🟢 CEMPRO" in text
+    assert "🔴 WAAREEENER" in text
 
 
 def test_linkedin_drops_ipo_section(briefing):
@@ -227,35 +234,33 @@ def test_linkedin_net_is_signed(briefing):
 
 
 def test_linkedin_flow_block_format(briefing):
-    """Flows: institution + emoji + bold net on first line, buy/sell indented below."""
+    """Flows: single line per side — emoji + institution + net + buy/sell inline."""
     text = format_linkedin(briefing)
-    # FII block: red emoji + signed net, then indented buy/sell
-    assert "FII 🔴 -8,047\n   buy 15,050 · sell 23,097" in text
-    # DII block: green emoji + signed net, then indented buy/sell
-    assert "DII 🟢 +3,487\n   buy 18,253 · sell 14,766" in text
+    # FII: red emoji, signed net, buy/sell on the same line
+    assert "🔴 FII -8,047  ·  buy 15,050 · sell 23,097" in text
+    assert "🟢 DII +3,487  ·  buy 18,253 · sell 14,766" in text
 
 
 def test_linkedin_indices_show_point_change(briefing):
     """Each index line shows absolute point change alongside %."""
     text = format_linkedin(briefing)
-    # Nifty 50: 23997.55 - 24177.65 = -180.10
     assert "Nifty 50 23,997.55" in text
     assert "-180.10" in text
     assert "(-0.74%)" in text
 
 
 def test_linkedin_indices_use_color_emoji(briefing):
-    """Indices show color emoji (🟢/🔴) before the change."""
+    """Color emoji prefixes the index name on each row."""
     text = format_linkedin(briefing)
-    # Nifty 50 fell -0.74% → 🔴
-    assert "🔴 -180.10" in text
-    # India VIX rose +5.86% → 🟢
-    assert "🟢 +1.02" in text
+    # Nifty 50 fell -0.74% → 🔴 prefix
+    assert "🔴 Nifty 50" in text
+    # India VIX rose +5.86% → 🟢 prefix
+    assert "🟢 India VIX" in text
 
 
 def test_linkedin_shows_dollar_index(briefing):
     text = format_linkedin(briefing)
-    assert "Dollar Index" in text
+    assert "DXY" in text
     assert "98.31" in text
 
 
@@ -283,10 +288,12 @@ def test_linkedin_prefers_ibja_gold_when_available(briefing):
     assert "₹141,679/10g" not in text
 
 
-def test_linkedin_section_separation_uses_double_blank(briefing):
+def test_linkedin_section_separation_single_blank(briefing):
+    """LinkedIn uses single blank line between sections (compact mode)."""
     text = format_linkedin(briefing)
-    # Triple newline = two blank lines between sections
-    assert "\n\n\n" in text
+    assert "\n\n" in text
+    # And NOT two blank lines (that was the older, more vertical layout)
+    assert "\n\n\n" not in text
 
 
 # ---------- Telegram ----------
