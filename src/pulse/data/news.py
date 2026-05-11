@@ -7,6 +7,7 @@ unavailable.
 from __future__ import annotations
 
 import asyncio
+import email.utils
 import html
 import re
 from datetime import datetime, timezone
@@ -16,7 +17,30 @@ from xml.etree import ElementTree as ET
 import httpx
 from pydantic import BaseModel, ConfigDict
 
-from .regulatory import _parse_pubdate
+_TZ_TAIL = re.compile(r"\s*[+-]\d{4}\s*$")
+
+
+def _parse_pubdate(raw: str) -> Optional[datetime]:
+    """Tolerant pubDate parser. Handles RFC-822 (RBI) and SEBI's non-standard
+    '30 Apr, 2026 +0530' format. Used to filter feed items by published date."""
+    s = raw.strip()
+    if not s:
+        return None
+    try:
+        dt = email.utils.parsedate_to_datetime(s)
+        if dt is not None:
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+    except (TypeError, ValueError):
+        pass
+    cleaned = _TZ_TAIL.sub("", s).replace(",", "").strip()
+    for fmt in ("%d %b %Y %H:%M:%S", "%d %b %Y", "%d %B %Y", "%Y-%m-%d", "%d-%b-%Y"):
+        try:
+            return datetime.strptime(cleaned, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 # Full browser fingerprint — Business Standard rejects plain UAs and even
 # Chrome UA without client hints. With these extras it returns 200.

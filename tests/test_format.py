@@ -12,11 +12,8 @@ from pulse.format import (
 from pulse.format.common import (
     crore,
     fmt_num,
-    short_ipo_label,
     signed_pct,
-    trend_arrow_unicode,
     trend_emoji,
-    vol_ratio,
 )
 from pulse.models import (
     FIIDIICash,
@@ -27,8 +24,6 @@ from pulse.models import (
     MacroSnapshot,
     MoversSnapshot,
     PulseBriefing,
-    RegulatoryItem,
-    RegulatorySnapshot,
     StockMover,
 )
 
@@ -63,19 +58,19 @@ def briefing() -> PulseBriefing:
         fetched_at=datetime(2026, 5, 3, 3, 0, tzinfo=timezone.utc),
         gainers=[
             StockMover(symbol="CEMPRO", name="Cemindia Projects", last=815.25,
-                       change_pct=20.0, volume=19_766_290, avg_volume_20d=1_350_000, volume_ratio=14.64),
+                       change_pct=20.0, volume=19_766_290),
             StockMover(symbol="MEESHO", name="Meesho", last=194.0,
-                       change_pct=12.35, volume=150_000_000, avg_volume_20d=17_000_000, volume_ratio=8.82),
+                       change_pct=12.35, volume=150_000_000),
             StockMover(symbol="SYNGENE", name="Syngene", last=468.05,
-                       change_pct=8.31, volume=59_000_000, avg_volume_20d=3_900_000, volume_ratio=15.17),
+                       change_pct=8.31, volume=59_000_000),
         ],
         losers=[
             StockMover(symbol="WAAREEENER", name="Waaree Energies", last=3129.9,
-                       change_pct=-10.65, volume=8_109_147, avg_volume_20d=2_135_000, volume_ratio=3.80),
+                       change_pct=-10.65, volume=8_109_147),
             StockMover(symbol="HEG", name="HEG Ltd", last=594.0,
-                       change_pct=-9.78, volume=5_840_973, avg_volume_20d=2_835_000, volume_ratio=2.06),
+                       change_pct=-9.78, volume=5_840_973),
             StockMover(symbol="EMMVEE", name="Emmvee Photovoltaic", last=262.49,
-                       change_pct=-9.75, volume=13_098_890, avg_volume_20d=5_796_000, volume_ratio=2.26),
+                       change_pct=-9.75, volume=13_098_890),
         ],
     )
     flows = FlowsSnapshot(
@@ -93,19 +88,9 @@ def briefing() -> PulseBriefing:
         gold=_macro_q("GC=F", "Gold (USD/oz)", 4644.50, 4629.90),
         india_gsec_10y=_macro_q("IN10Y", "India G-Sec 10Y (%)", 7.02, 7.05),
     )
-    regulatory = RegulatorySnapshot(
-        fetched_at=datetime(2026, 5, 3, 3, 0, tzinfo=timezone.utc),
-        items=[
-            RegulatoryItem(source="NSE-IPO",
-                           title="Upcoming IPO: Bagmane Prime Office REIT (BAGMANE) — opens 05-May-2026, closes 07-May-2026",
-                           url="https://nse.com/x", published=datetime(2026, 5, 3, 3, 0, tzinfo=timezone.utc)),
-        ],
-        unavailable_sources=[],
-    )
     return PulseBriefing(
         fetched_at=datetime(2026, 5, 3, 3, 0, tzinfo=timezone.utc),
-        indices=indices, movers=movers, flows=flows,
-        regulatory=regulatory, macro=macro,
+        indices=indices, movers=movers, flows=flows, macro=macro,
     )
 
 
@@ -123,30 +108,10 @@ def test_crore_signed():
     assert crore(0) == "+0"
 
 
-def test_vol_ratio():
-    assert vol_ratio(None) == ""
-    assert vol_ratio(2.345) == " (2.3x avg vol)"
-
-
-def test_trend_arrow_unicode():
-    assert trend_arrow_unicode(0.5) == "↑"
-    assert trend_arrow_unicode(-0.5) == "↓"
-    assert trend_arrow_unicode(0.0) == "→"
-
-
 def test_trend_emoji():
     assert trend_emoji(0.5) == "🟢"
     assert trend_emoji(-0.5) == "🔴"
     assert trend_emoji(0.0) == "⚪"
-
-
-def test_short_ipo_label_strips_limited():
-    label = short_ipo_label("Upcoming IPO: Foo Ventures Limited (FOO) — opens 30-Apr-2026, closes 02-May-2026")
-    assert label == "Foo Ventures (FOO) · opens 30 Apr"
-
-
-def test_short_ipo_label_returns_none_on_unmatchable():
-    assert short_ipo_label("Some random title") is None
 
 
 # ---------- LinkedIn ----------

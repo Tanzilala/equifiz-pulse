@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -48,10 +48,6 @@ class StockMover(BaseModel):
     last: float
     change_pct: float
     volume: int
-    avg_volume_20d: Optional[int] = None
-    volume_ratio: Optional[float] = Field(
-        default=None, description="today's volume / 20-day avg"
-    )
 
 
 class MoversSnapshot(BaseModel):
@@ -97,29 +93,6 @@ class FlowsSnapshot(BaseModel):
     fno_unavailable_reason: Optional[str] = None
 
 
-# ---------- Regulatory ----------
-
-RegulatorySource = Literal["RBI", "SEBI", "NSE-IPO"]
-
-
-class RegulatoryItem(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    source: RegulatorySource
-    title: str
-    url: str
-    published: datetime
-    summary: Optional[str] = None
-
-
-class RegulatorySnapshot(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    fetched_at: datetime
-    items: list[RegulatoryItem]
-    unavailable_sources: list[str] = Field(default_factory=list)
-
-
 # ---------- Macro ----------
 
 class MacroQuote(BaseModel):
@@ -159,5 +132,4 @@ class PulseBriefing(BaseModel):
     indices: IndicesSnapshot
     movers: MoversSnapshot
     flows: FlowsSnapshot
-    regulatory: RegulatorySnapshot
     macro: MacroSnapshot

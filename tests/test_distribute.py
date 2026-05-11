@@ -21,7 +21,6 @@ from pulse.models import (
     MacroSnapshot,
     MoversSnapshot,
     PulseBriefing,
-    RegulatorySnapshot,
     StockMover,
 )
 
@@ -62,7 +61,6 @@ def briefing() -> PulseBriefing:
             cash=FIIDIICash(date=date(2026, 4, 30), fii_buy=10000, fii_sell=12000,
                             fii_net=-2000, dii_buy=8000, dii_sell=7000, dii_net=1000),
         ),
-        regulatory=RegulatorySnapshot(fetched_at=fa, items=[]),
         macro=MacroSnapshot(
             fetched_at=fa,
             usdinr=_macro_q("INR=X", "USDINR", 84.5, 84.4),

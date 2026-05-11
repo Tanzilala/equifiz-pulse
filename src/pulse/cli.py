@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import shutil
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,15 +29,10 @@ from .format import (
 )
 from .observability import RunLogger, build_run_entry
 
-# Pre-load .env so ANTHROPIC_API_KEY etc. are available before commands run.
-def _load_env() -> None:
-    """Load .env, but treat empty strings in os.environ as unset.
 
-    Some shells/harnesses inject empty `ANTHROPIC_API_KEY=""` etc. With
-    `override=False`, plain load_dotenv would refuse to overwrite the empty,
-    so the .env value never wins. We manually copy values from .env when the
-    current env entry is empty or whitespace.
-    """
+def _load_env() -> None:
+    """Load .env, treating empty strings in os.environ as unset (some harnesses
+    inject empty values that would otherwise block override=False)."""
     env_path = Path(".env")
     if not env_path.exists():
         return
@@ -65,14 +58,6 @@ except (AttributeError, OSError):
 @click.group()
 def main() -> None:
     """equifiz-pulse — daily Indian markets briefing."""
-
-
-@main.command()
-def indices() -> None:
-    """Print today's index snapshot (live NSE) for debugging."""
-    from .smoke import main as smoke_main
-
-    raise SystemExit(smoke_main())
 
 
 @main.command()
@@ -340,68 +325,6 @@ def logs(n: int, raw: bool) -> None:
             (e.get("error") or "")[:40],
         )
     console.print(table)
-
-
-def _find_uv() -> str | None:
-    p = shutil.which("uv") or shutil.which("uv.exe")
-    if p:
-        return p
-    if sys.platform == "win32":
-        local = os.environ.get("LOCALAPPDATA", "")
-        if local:
-            base = Path(local) / "Microsoft" / "WinGet" / "Packages"
-            if base.exists():
-                for cand in base.rglob("uv.exe"):
-                    return str(cand)
-    return None
-
-
-@main.command("install-schedule")
-@click.option("--time", "time_", default="08:30", help="Local HH:MM (default 08:30).")
-@click.option("--task-name", default="EquifizPulseDaily")
-@click.option("--apply", "apply_", is_flag=True, help="Actually create the task. Without this, just prints the command.")
-@click.option("--uv-path", "uv_path", default=None, help="Override the uv.exe path.")
-def install_schedule(time_: str, task_name: str, apply_: bool, uv_path: str | None) -> None:
-    """Install a Windows scheduled task to run `pulse run --confirm` daily."""
-    console = Console(force_terminal=True, legacy_windows=False)
-    project_dir = str(Path.cwd())
-    uv = uv_path or _find_uv()
-    if not uv:
-        console.print(
-            "[red]uv not found.[/] Pass [bold]--uv-path C:\\path\\to\\uv.exe[/] "
-            "or restart your shell so winget's PATH update takes effect."
-        )
-        raise SystemExit(2)
-
-    if sys.platform != "win32":
-        cron_line = f"30 8 * * 1-5 cd {project_dir} && {uv} run pulse run --confirm >> logs/cron.log 2>&1"
-        console.print("Add this line to your crontab (assumes server clock is IST):")
-        console.print(f"[bold]{cron_line}[/]")
-        return
-
-    tr = f'"{uv}" run --project "{project_dir}" pulse run --confirm'
-    cmd = [
-        "schtasks", "/Create", "/SC", "DAILY",
-        "/TN", task_name,
-        "/TR", tr,
-        "/ST", time_,
-        "/F",
-    ]
-    console.print("Will run:")
-    console.print(f"[bold]{' '.join(cmd)}[/]")
-    if not apply_:
-        console.print("[yellow]Dry run — pass --apply to actually create the task.[/]")
-        return
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    except FileNotFoundError as e:
-        console.print(f"[red]schtasks not available:[/] {e}")
-        raise SystemExit(2)
-    if result.returncode != 0:
-        console.print(f"[red]schtasks failed (exit {result.returncode}):[/] {result.stderr.strip()}")
-        raise SystemExit(result.returncode)
-    console.print(f"[green]Task {task_name!r} created — fires daily at {time_} local time.[/]")
-    console.print("[dim]Inspect with: schtasks /Query /TN " + task_name + "[/]")
 
 
 async def _post_all(posts: list[ChannelPost]) -> list[PostResult]:

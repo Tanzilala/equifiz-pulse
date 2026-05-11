@@ -30,7 +30,6 @@ uv run pulse run --only telegram --confirm # actually POSTs to N8N_TELEGRAM_WEBH
 uv run pulse run --confirm                 # post to all three webhooks
 
 # Debug
-uv run pulse indices                       # NSE indices snapshot only
 uv run pulse logs --last 10                # last 10 runs as a table
 uv run pulse logs --raw                    # raw JSONL
 
@@ -73,7 +72,7 @@ To tune the voice, edit the rules directly. No prompts, no API costs, determinis
 
 ## Logging
 
-Every `pulse run` writes one JSON line to `logs/pulse-YYYY-MM.jsonl` with started/finished timestamps, per-source data status (incl. F&O availability and regulatory unavailable_sources), volume-enriched mover ratio, per-channel post results, and exit code.
+Every `pulse run` writes one JSON line to `logs/pulse-YYYY-MM.jsonl` with started/finished timestamps, per-source data status (incl. F&O availability), per-channel post results, and exit code.
 
 ## Scheduling — daily auto-post
 
@@ -98,18 +97,7 @@ GitHub's cron has up to ~15 min drift under load — that's why we schedule for 
 
 To enable LinkedIn and WhatsApp later, edit the workflow and drop `--only telegram`, or trigger manually with a different `only` input.
 
-### B. Local Windows Task Scheduler
-
-Only good if your laptop is on/awake at 08:30 every weekday. If it sleeps, the task silently misses.
-
-```powershell
-uv run pulse install-schedule --time 08:30           # prints the schtasks command
-uv run pulse install-schedule --time 08:30 --apply   # creates the task
-```
-
-Installs a Windows Scheduled Task `EquifizPulseDaily`.
-
-### C. VPS cron in India (recommended)
+### B. VPS cron in India (recommended)
 
 Any always-on Linux box with an Indian IP. Hostinger Mumbai, AWS ap-south-1, Linode India, etc.
 

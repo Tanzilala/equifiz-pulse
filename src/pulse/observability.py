@@ -24,20 +24,10 @@ def derive_source_statuses(b: PulseBriefing) -> dict[str, Any]:
     else:
         flows["fno"] = "absent"
 
-    enriched = sum(1 for m in (*b.movers.gainers, *b.movers.losers) if m.avg_volume_20d)
-    total = len(b.movers.gainers) + len(b.movers.losers)
-
     return {
         "indices": "ok",
-        "movers": {
-            "ok": True,
-            "volume_enriched": f"{enriched}/{total}",
-        },
+        "movers": "ok",
         "flows": flows,
-        "regulatory": {
-            "items": len(b.regulatory.items),
-            "unavailable_sources": list(b.regulatory.unavailable_sources),
-        },
         "macro": "ok",
     }
 

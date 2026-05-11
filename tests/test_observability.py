@@ -16,7 +16,6 @@ from pulse.models import (
     MacroSnapshot,
     MoversSnapshot,
     PulseBriefing,
-    RegulatorySnapshot,
     StockMover,
 )
 from pulse.observability import RunLogger, build_run_entry, derive_source_statuses
@@ -57,18 +56,15 @@ def briefing(request) -> PulseBriefing:
         movers=MoversSnapshot(
             fetched_at=fa,
             gainers=[
-                StockMover(symbol="A", name="A", last=1, change_pct=1, volume=10, avg_volume_20d=5),
+                StockMover(symbol="A", name="A", last=1, change_pct=1, volume=10),
                 StockMover(symbol="B", name="B", last=1, change_pct=1, volume=10),
             ],
             losers=[
-                StockMover(symbol="Y", name="Y", last=1, change_pct=-1, volume=10, avg_volume_20d=5),
+                StockMover(symbol="Y", name="Y", last=1, change_pct=-1, volume=10),
                 StockMover(symbol="Z", name="Z", last=1, change_pct=-1, volume=10),
             ],
         ),
         flows=flows,
-        regulatory=RegulatorySnapshot(
-            fetched_at=fa, items=[], unavailable_sources=["RBI: TimeoutError"]
-        ),
         macro=MacroSnapshot(
             fetched_at=fa,
             usdinr=_macro("INR=X", "USDINR", 1, 1),
@@ -83,10 +79,9 @@ def briefing(request) -> PulseBriefing:
 def test_derive_source_statuses_fno_missing(briefing):
     s = derive_source_statuses(briefing)
     assert s["indices"] == "ok"
-    assert s["movers"]["volume_enriched"] == "2/4"
+    assert s["movers"] == "ok"
     assert s["flows"]["cash"] == "ok"
     assert "HTTP 404" in s["flows"]["fno"]
-    assert s["regulatory"]["unavailable_sources"] == ["RBI: TimeoutError"]
 
 
 @pytest.mark.parametrize("briefing", ["present"], indirect=True)
