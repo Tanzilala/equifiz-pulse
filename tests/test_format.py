@@ -234,19 +234,22 @@ def test_linkedin_net_is_signed(briefing):
 
 
 def test_linkedin_flow_block_format(briefing):
-    """Flows: single line per side — emoji + institution + net (buy · sell)."""
+    """Flows: single line per side — emoji + institution + net · buy · sell."""
     text = format_linkedin(briefing)
-    assert "🔴 FII -8,047 (buy 15,050 · sell 23,097)" in text
-    assert "🟢 DII +3,487 (buy 18,253 · sell 14,766)" in text
+    assert "🔴 FII -8,047  ·  buy 15,050 · sell 23,097" in text
+    assert "🟢 DII +3,487  ·  buy 18,253 · sell 14,766" in text
 
 
-def test_linkedin_has_emoji_section_headers(briefing):
-    """Sections lead with thematic emojis (📊 💸 🚀 🌐)."""
+def test_linkedin_has_plain_section_headers(briefing):
+    """Section headers are plain text, no decorative emoji prefixes."""
     text = format_linkedin(briefing)
-    assert "📊 Indices" in text
-    assert "💸 Flows" in text
-    assert "🚀 Top Movers" in text
-    assert "🌐 Macro" in text
+    assert "Indices\n" in text
+    assert "Flows" in text
+    assert "Top Movers" in text
+    assert "Macro\n" in text
+    # No emoji section headers (user preferred the plain version)
+    assert "📊 Indices" not in text
+    assert "💸 Flows" not in text
 
 
 def test_linkedin_ends_with_hashtags(briefing):
@@ -280,18 +283,18 @@ def test_linkedin_shows_dollar_index(briefing):
     assert "98.31" in text
 
 
-def test_linkedin_indices_use_single_paren_change(briefing):
-    """Indices show change as `(±points, ±pct%)` in a single paren — LinkedIn-native."""
+def test_linkedin_indices_use_double_space_change(briefing):
+    """Indices show change as `value  ±points (±pct%)` (double-space separator)."""
     text = format_linkedin(briefing)
-    # Nifty 50 fixture: change=-180.10, change_pct=-0.74
-    assert "(-180.10, -0.74%)" in text
-    # India VIX fixture: change=+1.02, change_pct=+5.86
-    assert "(+1.02, +5.86%)" in text
+    # Nifty 50 fixture: 23997.55  -180.10 (-0.74%)
+    assert "23,997.55  -180.10 (-0.74%)" in text
+    # India VIX fixture: 18.46  +1.02 (+5.86%)
+    assert "18.46  +1.02 (+5.86%)" in text
 
 
 def test_linkedin_shows_india_gsec_not_us(briefing):
     text = format_linkedin(briefing)
-    assert "India 10Y G-Sec" in text
+    assert "India G-Sec 10Y" in text
     assert "7.02" in text
     assert "US 10Y" not in text
 
