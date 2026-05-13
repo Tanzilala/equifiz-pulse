@@ -106,8 +106,11 @@ def _ist_today() -> "date":
     return datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Kolkata")).date()
 
 
-def _marker_path(ist_today: "date") -> Path:
-    return Path("logs") / "markers" / f"posted-{ist_today.isoformat()}.marker"
+def _marker_path(ist_today: "date", channel: str) -> Path:
+    """Per-channel daily marker. A channel that posted successfully today gets
+    skipped on subsequent runs, even if other channels failed — prevents the
+    duplicate-Telegram-on-LinkedIn-failure scenario."""
+    return Path("logs") / "markers" / f"posted-{ist_today.isoformat()}-{channel}.marker"
 
 
 VALID_CHANNELS = ("linkedin", "telegram", "whatsapp")
@@ -186,22 +189,31 @@ def run(only: str | None, confirm: bool, skip_if_stale: bool, once_per_day: bool
 
     ist_today = _ist_today()
 
-    # `--once-per-day` short-circuits before fetching: if we already posted today,
-    # no point hammering NSE/Yahoo just to throw the result away.
+    # `--once-per-day` is per-channel: skip channels that already posted today,
+    # only attempt the remaining ones. Short-circuit entirely if none remain so
+    # we don't hammer NSE/Yahoo for a no-op.
     if once_per_day and confirm:
-        marker = _marker_path(ist_today)
-        if marker.exists():
+        already_done = [ch for ch in channels if _marker_path(ist_today, ch).exists()]
+        pending = [ch for ch in channels if ch not in already_done]
+        if not pending:
             console.print(
-                f"[yellow]SKIP (already posted):[/] marker {marker.name} exists. "
-                f"Delete it to force a re-post."
+                f"[yellow]SKIP (already posted today):[/] {', '.join(already_done)}. "
+                f"Delete logs/markers/posted-{ist_today.isoformat()}-*.marker to force re-post."
             )
             logger.write(build_run_entry(
                 started_at=started_at, finished_at=datetime.now(timezone.utc),
                 confirm=confirm, only=only, narrative_source="-",
                 briefing=None, posts=[],
-                error=f"already_posted_today: {marker.name}", exit_code=0,
+                error=f"already_posted_today: {','.join(already_done)}", exit_code=0,
             ))
             return
+        if already_done:
+            console.print(
+                f"[dim]Skipping already-posted: {', '.join(already_done)}. "
+                f"Attempting: {', '.join(pending)}.[/]"
+            )
+        channels = pending
+        webhooks = {ch: webhooks[ch] for ch in pending}
 
     try:
         briefing = asyncio.run(build_briefing())
@@ -275,12 +287,15 @@ def run(only: str | None, confirm: bool, skip_if_stale: bool, once_per_day: bool
 
     exit_code = 1 if failed else 0
 
-    # Write the once-per-day marker only if all targeted posts succeeded —
-    # partial success leaves the day unmarked so the next cron tick can retry.
-    if once_per_day and confirm and exit_code == 0:
-        marker = _marker_path(ist_today)
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+    # Per-channel markers: each successful post gets its own marker so a single
+    # failed channel doesn't trigger duplicate posts on the next cron tick for
+    # the channels that already succeeded.
+    if once_per_day and confirm:
+        for res in results:
+            if res.status == "sent":
+                m = _marker_path(ist_today, res.channel)
+                m.parent.mkdir(parents=True, exist_ok=True)
+                m.write_text(datetime.now(timezone.utc).isoformat() + "\n")
 
     logger.write(build_run_entry(
         started_at=started_at, finished_at=datetime.now(timezone.utc),

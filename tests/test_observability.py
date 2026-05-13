@@ -128,15 +128,21 @@ def test_run_logger_tail_handles_missing_file(tmp_path):
 
 
 def test_marker_path_format(tmp_path, monkeypatch):
-    """The once-per-day marker uses the IST date in the filename."""
+    """The once-per-day marker is per-channel and uses the IST date."""
     from datetime import date
 
     from pulse.cli import _marker_path
 
     monkeypatch.chdir(tmp_path)
-    p = _marker_path(date(2026, 5, 7))
-    assert p.parts[-1] == "posted-2026-05-07.marker"
+    p = _marker_path(date(2026, 5, 7), "telegram")
+    assert p.parts[-1] == "posted-2026-05-07-telegram.marker"
     assert "markers" in p.parts
+    # Per-channel: a failure on one channel doesn't block other channels from
+    # being skipped on subsequent runs (the bug that caused 5x Telegram duplicates).
+    assert (
+        _marker_path(date(2026, 5, 7), "linkedin").parts[-1]
+        == "posted-2026-05-07-linkedin.marker"
+    )
 
 
 def test_ist_today_returns_date(monkeypatch):
