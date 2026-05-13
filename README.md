@@ -1,6 +1,6 @@
 # equifiz-pulse
 
-Daily Indian markets briefing. Pulls from NSE / Yahoo Finance / RBI+SEBI RSS, generates LinkedIn / Telegram / WhatsApp variants, ships through n8n webhooks. **No external LLM** — narrative prose is rule-derived from the data itself.
+Daily Indian markets briefing. Pulls from NSE / Yahoo Finance / RBI+SEBI RSS, generates Telegram / WhatsApp variants, ships through n8n webhooks. **No external LLM** — narrative prose is rule-derived from the data itself.
 
 ## Status
 
@@ -14,20 +14,20 @@ cp .env.example .env       # then edit
 ```
 
 `.env` keys:
-- `N8N_LINKEDIN_WEBHOOK`, `N8N_TELEGRAM_WEBHOOK`, `N8N_WHATSAPP_WEBHOOK` — required to actually post.
+- `N8N_TELEGRAM_WEBHOOK`, `N8N_WHATSAPP_WEBHOOK` — required to actually post.
 - `EQUIFIZ_PULSE_URL` — link printed in the Telegram footer (default `https://equifiz.com/pulse`).
 
 ## CLI
 
 ```bash
 # Preview only — never POSTs anything
-uv run pulse preview                       # all three channel formats
+uv run pulse preview                       # all configured channel formats
 uv run pulse preview --only telegram
 
 # Run = post via n8n.  --confirm is REQUIRED to actually send.
 uv run pulse run --only telegram           # dry run (prints payload, no POST)
 uv run pulse run --only telegram --confirm # actually POSTs to N8N_TELEGRAM_WEBHOOK
-uv run pulse run --confirm                 # post to all three webhooks
+uv run pulse run --confirm                 # post to all configured webhooks
 
 # Debug
 uv run pulse logs --last 10                # last 10 runs as a table
@@ -41,7 +41,7 @@ uv run pulse news run --once-per-day --confirm   # post; skips if already posted
 
 ### n8n flows
 
-Importable workflow JSON files live in [`n8n-flows/`](n8n-flows/). Telegram is ready — see [n8n-flows/README.md](n8n-flows/README.md) for setup. LinkedIn + WhatsApp flows are TODO.
+Importable workflow JSON files live in [`n8n-flows/`](n8n-flows/). Telegram is ready — see [n8n-flows/README.md](n8n-flows/README.md) for setup. WhatsApp flow is TODO.
 
 ### n8n payload shape
 
@@ -56,7 +56,7 @@ Each POST is a JSON envelope:
 }
 ```
 
-`format` is `markdown` for Telegram and `plain` for LinkedIn / WhatsApp. Your n8n flow reads `text` and routes accordingly.
+`format` is `markdown` for Telegram and `plain` for WhatsApp. Your n8n flow reads `text` and routes accordingly.
 
 Failed posts return non-zero exit codes (1 = some channels failed, 2 = config error).
 
@@ -89,13 +89,13 @@ Setup:
 1. Push the repo to GitHub (private is fine).
 2. **Settings → Secrets and variables → Actions → New repository secret**, add:
    - `N8N_TELEGRAM_WEBHOOK` (required for default workflow)
-   - `N8N_LINKEDIN_WEBHOOK`, `N8N_WHATSAPP_WEBHOOK` (when those flows exist)
+   - `N8N_WHATSAPP_WEBHOOK` (when that flow exists)
    - `EQUIFIZ_PULSE_URL` (optional — Telegram footer link)
 3. Open **Actions** tab → enable workflows → manually trigger **Daily Pulse** once via *Run workflow* to verify.
 
 GitHub's cron has up to ~15 min drift under load — that's why we schedule for 08:20 IST, leaving a buffer before market open at 09:15.
 
-To enable LinkedIn and WhatsApp later, edit the workflow and drop `--only telegram`, or trigger manually with a different `only` input.
+To enable WhatsApp later, edit the workflow and drop `--only telegram`, or trigger manually with a different `only` input.
 
 ### B. VPS cron in India (recommended)
 
@@ -122,7 +122,8 @@ Two flags that change *when* `pulse run` actually posts:
 # Exit cleanly (no post) if NSE hasn't published today's FII/DII figures yet.
 uv run pulse run --only telegram --skip-if-stale --confirm
 
-# Skip if a successful post was already made today (uses logs/markers/posted-YYYY-MM-DD.marker).
+# Skip if a successful post was already made today (per-channel markers at
+# logs/markers/posted-YYYY-MM-DD-<channel>.marker).
 uv run pulse run --only telegram --once-per-day --confirm
 
 # Combined — what the cron uses. Run every 30 min in the evening; the first
@@ -132,7 +133,7 @@ uv run pulse run --only telegram --skip-if-stale --once-per-day --confirm
 
 A "stale" run logs `error: stale_fii_data: got 2026-04-30, expected 2026-05-03` and exits 0 (success — nothing to do). Same for "already posted" runs. So scheduled retries don't pollute the log with errors.
 
-To force a re-post on a day, delete the marker:
+To force a re-post on a day, delete the channel's marker:
 ```bash
-rm logs/markers/posted-YYYY-MM-DD.marker
+rm logs/markers/posted-YYYY-MM-DD-telegram.marker
 ```

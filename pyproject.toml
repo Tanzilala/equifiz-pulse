@@ -1,7 +1,7 @@
 [project]
 name = "equifiz-pulse"
 version = "0.1.0"
-description = "Daily Indian markets briefing — generates and pushes to LinkedIn / Telegram / WhatsApp via n8n."
+description = "Daily Indian markets briefing — generates and pushes to Telegram / WhatsApp via n8n."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

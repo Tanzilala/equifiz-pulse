@@ -5,7 +5,6 @@ from datetime import date, datetime, timezone
 import pytest
 
 from pulse.format import (
-    format_linkedin,
     format_telegram,
     format_whatsapp,
 )
@@ -114,181 +113,6 @@ def test_trend_emoji():
     assert trend_emoji(0.0) == "⚪"
 
 
-# ---------- LinkedIn ----------
-
-def test_linkedin_starts_with_pulse_header(briefing):
-    text = format_linkedin(briefing)
-    assert text.startswith("Equifiz Pulse · ")
-
-
-def test_linkedin_no_commentary(briefing):
-    """No hook/framing/'what to watch' — just header + data sections."""
-    text = format_linkedin(briefing)
-    assert "Watch" not in text
-    assert "FIIs sold heavily" not in text
-    assert "Foreign sellers" not in text
-
-
-def test_linkedin_indices_in_correct_order(briefing):
-    text = format_linkedin(briefing)
-    pos_sensex = text.find("Sensex")
-    pos_nifty = text.find("Nifty 50")
-    pos_bank = text.find("Bank Nifty")
-    pos_vix = text.find("India VIX")
-    assert 0 < pos_sensex < pos_nifty < pos_bank < pos_vix
-
-
-def test_linkedin_includes_sensex(briefing):
-    text = format_linkedin(briefing)
-    assert "Sensex 81,234.50" in text
-
-
-def test_linkedin_no_midcap(briefing):
-    text = format_linkedin(briefing)
-    assert "Midcap" not in text
-
-
-def test_linkedin_length_within_band(briefing):
-    text = format_linkedin(briefing)
-    assert 500 <= len(text) <= 900, f"unexpected length {len(text)}"
-
-
-def test_linkedin_drops_prev_close_label(briefing):
-    """Header is plain 'Indices' — '(prev close)' was redundant with the date."""
-    text = format_linkedin(briefing)
-    assert "(prev close)" not in text
-
-
-def test_linkedin_movers_have_no_volume(briefing):
-    """Volume ratio (e.g. '14.6x') should be removed from movers display."""
-    text = format_linkedin(briefing)
-    assert "x)" not in text
-    assert "avg vol" not in text
-
-
-def test_linkedin_movers_inline_format(briefing):
-    """Gainers and losers each share one line, separated by '·'."""
-    text = format_linkedin(briefing)
-    assert "Top Movers (Nifty 500)" in text
-    # Gainers line: '🟢 SYM +X% · SYM +X% · SYM +X%'
-    assert " · " in text
-    assert "🟢 CEMPRO" in text
-    assert "🔴 WAAREEENER" in text
-
-
-def test_linkedin_drops_ipo_section(briefing):
-    """IPOs were intentionally removed from the briefing."""
-    text = format_linkedin(briefing)
-    assert "Upcoming IPOs" not in text
-    assert "[NSE-IPO]" not in text
-
-
-def test_linkedin_shows_full_fii_dii(briefing):
-    text = format_linkedin(briefing)
-    # FII fixture: buy=15049.55  sell=23097.41 → rounded 15,050 - 23,097 = -8,047
-    assert "buy 15,050" in text
-    assert "sell 23,097" in text
-    assert "-8,047" in text  # net consistent with displayed buy − sell
-
-
-def test_linkedin_net_is_signed(briefing):
-    """Net keeps both + (positive) and − (negative) signs for clarity."""
-    text = format_linkedin(briefing)
-    assert "+3,487" in text  # DII positive net
-    assert "-8,047" in text  # FII negative net
-
-
-def test_linkedin_flow_block_format(briefing):
-    """Flows: single line per side — emoji + institution + net · buy · sell."""
-    text = format_linkedin(briefing)
-    assert "🔴 FII -8,047  ·  buy 15,050 · sell 23,097" in text
-    assert "🟢 DII +3,487  ·  buy 18,253 · sell 14,766" in text
-
-
-def test_linkedin_has_plain_section_headers(briefing):
-    """Section headers are plain text, no decorative emoji prefixes."""
-    text = format_linkedin(briefing)
-    assert "Indices\n" in text
-    assert "Flows" in text
-    assert "Top Movers" in text
-    assert "Macro\n" in text
-    # No emoji section headers (user preferred the plain version)
-    assert "📊 Indices" not in text
-    assert "💸 Flows" not in text
-
-
-def test_linkedin_ends_with_hashtags(briefing):
-    """Hashtag footer for LinkedIn reach."""
-    text = format_linkedin(briefing)
-    assert text.rstrip().endswith("#Equifiz")
-    for tag in ("#IndianStockMarket", "#NSE", "#BSE", "#Nifty", "#Sensex"):
-        assert tag in text
-
-
-def test_linkedin_indices_show_point_change(briefing):
-    """Each index line shows absolute point change alongside %."""
-    text = format_linkedin(briefing)
-    assert "Nifty 50 23,997.55" in text
-    assert "-180.10" in text
-    assert "-0.74%" in text
-
-
-def test_linkedin_indices_use_color_emoji(briefing):
-    """Color emoji prefixes the index name on each row."""
-    text = format_linkedin(briefing)
-    # Nifty 50 fell -0.74% → 🔴 prefix
-    assert "🔴 Nifty 50" in text
-    # India VIX rose +5.86% → 🟢 prefix
-    assert "🟢 India VIX" in text
-
-
-def test_linkedin_shows_dollar_index(briefing):
-    text = format_linkedin(briefing)
-    assert "DXY" in text
-    assert "98.31" in text
-
-
-def test_linkedin_indices_use_double_space_change(briefing):
-    """Indices show change as `value  ±points (±pct%)` (double-space separator)."""
-    text = format_linkedin(briefing)
-    # Nifty 50 fixture: 23997.55  -180.10 (-0.74%)
-    assert "23,997.55  -180.10 (-0.74%)" in text
-    # India VIX fixture: 18.46  +1.02 (+5.86%)
-    assert "18.46  +1.02 (+5.86%)" in text
-
-
-def test_linkedin_shows_india_gsec_not_us(briefing):
-    text = format_linkedin(briefing)
-    assert "India G-Sec 10Y" in text
-    assert "7.02" in text
-    assert "US 10Y" not in text
-
-
-def test_linkedin_falls_back_to_computed_gold_inr_when_ibja_unavailable(briefing):
-    """gold_inr_per_10g is None in fixture → format_linkedin computes from
-    USD × USDINR (Gold $4644.50 × 94.88 / 31.1035 × 10 ≈ ₹141,679)."""
-    text = format_linkedin(briefing)
-    assert "₹141,679/10g" in text
-
-
-def test_linkedin_prefers_ibja_gold_when_available(briefing):
-    """If IBJA's official rate is fetched, use that instead of computing from USD."""
-    enriched = briefing.model_copy(update={
-        "macro": briefing.macro.model_copy(update={"gold_inr_per_10g": 148100.0})
-    })
-    text = format_linkedin(enriched)
-    assert "₹148,100/10g" in text
-    assert "₹141,679/10g" not in text
-
-
-def test_linkedin_section_separation_single_blank(briefing):
-    """LinkedIn uses single blank line between sections (compact mode)."""
-    text = format_linkedin(briefing)
-    assert "\n\n" in text
-    # And NOT two blank lines (that was the older, more vertical layout)
-    assert "\n\n\n" not in text
-
-
 # ---------- Telegram ----------
 
 def test_telegram_starts_with_pulse_header(briefing):
@@ -355,9 +179,7 @@ def test_whatsapp_includes_sensex(briefing):
     assert "Sensex 81,234.50" in text
 
 
-def test_whatsapp_shorter_than_others(briefing):
+def test_whatsapp_shorter_than_telegram(briefing):
     w = format_whatsapp(briefing)
-    li = format_linkedin(briefing)
     tg = format_telegram(briefing)
-    assert len(w) < len(li)
     assert len(w) < len(tg)

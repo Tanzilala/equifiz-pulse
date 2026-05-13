@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: 'Restrict to one channel (linkedin / telegram / whatsapp)'
+        description: 'Restrict to one channel (telegram / whatsapp)'
         required: false
         default: ''
 
@@ -39,7 +39,6 @@ jobs:
       - name: Run pulse
         env:
           N8N_TELEGRAM_WEBHOOK: ${{ secrets.N8N_TELEGRAM_WEBHOOK }}
-          N8N_LINKEDIN_WEBHOOK: ${{ secrets.N8N_LINKEDIN_WEBHOOK }}
           N8N_WHATSAPP_WEBHOOK: ${{ secrets.N8N_WHATSAPP_WEBHOOK }}
           EQUIFIZ_PULSE_URL:    ${{ secrets.EQUIFIZ_PULSE_URL }}
         run: |

@@ -90,12 +90,6 @@ def test_build_channel_post_whatsapp_is_plain(briefing):
     assert "*" not in p.payload["text"]
 
 
-def test_build_channel_post_linkedin(briefing):
-    p = build_channel_post("linkedin", briefing, webhook_url="https://hook/l")
-    assert p.payload["format"] == "plain"
-    assert "Nifty 50" in p.payload["text"]
-
-
 # ---------- post_to_n8n ----------
 
 @pytest.mark.asyncio

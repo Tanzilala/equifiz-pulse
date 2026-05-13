@@ -22,7 +22,6 @@ from .distribute import (
     post_to_n8n,
 )
 from .format import (
-    format_linkedin,
     format_news,
     format_telegram,
     format_whatsapp,
@@ -63,12 +62,12 @@ def main() -> None:
 @main.command()
 @click.option(
     "--only",
-    type=click.Choice(["linkedin", "telegram", "whatsapp"], case_sensitive=False),
+    type=click.Choice(["telegram", "whatsapp"], case_sensitive=False),
     default=None,
     help="Render only one channel.",
 )
 def preview(only: str | None) -> None:
-    """Generate today's briefing and print all three channel formats."""
+    """Generate today's briefing and print channel formats."""
     console = Console(force_terminal=True, width=160, legacy_windows=False)
     try:
         briefing = asyncio.run(build_briefing())
@@ -76,13 +75,7 @@ def preview(only: str | None) -> None:
         console.print(f"[red]Pulse fetch failed:[/] {type(e).__name__}: {e}")
         raise SystemExit(1)
 
-    selections = (
-        [only.lower()] if only else ["linkedin", "telegram", "whatsapp"]
-    )
-
-    if "linkedin" in selections:
-        text = format_linkedin(briefing)
-        console.print(Panel(text, title=f"LinkedIn ({len(text)} chars)", expand=True))
+    selections = [only.lower()] if only else ["telegram", "whatsapp"]
 
     if "telegram" in selections:
         text = format_telegram(briefing)
@@ -94,7 +87,6 @@ def preview(only: str | None) -> None:
 
 
 CHANNEL_TO_ENV = {
-    "linkedin": "N8N_LINKEDIN_WEBHOOK",
     "telegram": "N8N_TELEGRAM_WEBHOOK",
     "whatsapp": "N8N_WHATSAPP_WEBHOOK",
 }
@@ -108,12 +100,11 @@ def _ist_today() -> "date":
 
 def _marker_path(ist_today: "date", channel: str) -> Path:
     """Per-channel daily marker. A channel that posted successfully today gets
-    skipped on subsequent runs, even if other channels failed — prevents the
-    duplicate-Telegram-on-LinkedIn-failure scenario."""
+    skipped on subsequent runs, even if other channels failed."""
     return Path("logs") / "markers" / f"posted-{ist_today.isoformat()}-{channel}.marker"
 
 
-VALID_CHANNELS = ("linkedin", "telegram", "whatsapp")
+VALID_CHANNELS = ("telegram", "whatsapp")
 
 
 @main.command()
@@ -122,7 +113,7 @@ VALID_CHANNELS = ("linkedin", "telegram", "whatsapp")
     default=None,
     help=(
         "Channel(s) to send to. Comma-separated for multiple, e.g. "
-        "'telegram,linkedin'. Default: all three configured channels."
+        "'telegram,whatsapp'. Default: all configured channels."
     ),
 )
 @click.option(

@@ -140,8 +140,8 @@ def test_marker_path_format(tmp_path, monkeypatch):
     # Per-channel: a failure on one channel doesn't block other channels from
     # being skipped on subsequent runs (the bug that caused 5x Telegram duplicates).
     assert (
-        _marker_path(date(2026, 5, 7), "linkedin").parts[-1]
-        == "posted-2026-05-07-linkedin.marker"
+        _marker_path(date(2026, 5, 7), "whatsapp").parts[-1]
+        == "posted-2026-05-07-whatsapp.marker"
     )
 
 

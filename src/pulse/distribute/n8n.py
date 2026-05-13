@@ -3,14 +3,14 @@
 Each channel maps to its own webhook URL and gets a JSON envelope:
 
     {
-      "channel":      "telegram" | "linkedin" | "whatsapp",
+      "channel":      "telegram" | "whatsapp",
       "text":         "<formatted message>",
       "format":       "markdown" | "plain",
       "generated_at": "<iso8601 utc>"
     }
 
 The n8n flow on the receiving end is responsible for actually calling
-LinkedIn / Telegram / WhatsApp.
+Telegram / WhatsApp.
 """
 from __future__ import annotations
 
@@ -21,12 +21,11 @@ from typing import Any, Literal, Optional
 import httpx
 from pydantic import BaseModel, ConfigDict
 
-from ..format import format_linkedin, format_telegram, format_whatsapp
+from ..format import format_telegram, format_whatsapp
 from ..models import PulseBriefing
 
-Channel = Literal["linkedin", "telegram", "whatsapp"]
+Channel = Literal["telegram", "whatsapp"]
 PAYLOAD_FORMAT: dict[Channel, str] = {
-    "linkedin": "plain",
     "telegram": "markdown",
     "whatsapp": "plain",
 }
@@ -61,9 +60,7 @@ def build_channel_post(
     *,
     webhook_url: str,
 ) -> ChannelPost:
-    if channel == "linkedin":
-        text = format_linkedin(briefing)
-    elif channel == "telegram":
+    if channel == "telegram":
         text = format_telegram(briefing)
     elif channel == "whatsapp":
         text = format_whatsapp(briefing)
